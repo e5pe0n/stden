@@ -1,5 +1,5 @@
 {
-	"name": "@e5pe0n/studyen",
+	"name": "@e5pe0n/stden",
 	"type": "module",
 	"scripts": {
 		"dev:be": "pnpm --filter backend dev",
