@@ -1,0 +1,7 @@
+packages:
+  - "packages/*"
+  - "apps/*"
+
+catalog:
+  "@typescript/native-preview": "7.0.0-dev.20250523.1"
+  "@types/node": "22"

@@ -2,15 +2,15 @@
 	"name": "@e5pe0n/studyen",
 	"type": "module",
 	"scripts": {
-		"dev": "tsx src/index.ts",
+		"dev:be": "pnpm --filter backend dev",
+		"lint": "biome check",
+		"lint:fix": "biome check --fix",
+		"type": "pnpm -r type",
+		"type:ba": "pnpm --filter backend type",
 		"test": "echo \"No tests specified\" && exit 0"
 	},
-	"dependencies": {
-		"@google/genai": "^1.0.1",
-		"dotenv": "^16.5.0"
-	},
 	"devDependencies": {
-		"@types/node": "22",
-		"tsx": "^4.19.4"
+		"@biomejs/biome": "^1.9.4",
+		"@typescript/native-preview": "catalog:"
 	}
 }
