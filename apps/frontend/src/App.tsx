@@ -1,17 +1,27 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 function App() {
   const [messages, setMessages] = useState([
-    { sender: "bot", text: "Hi! Ask me the meaning of any English word." },
+    {
+      sender: "bot",
+      text: "Hi! Ask me the meaning of any English word.",
+      id: "welcome",
+    },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  async function fetchMeaning(word: string) {
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  async function fetchMeaning(text: string) {
     try {
       const res = await fetch("http://localhost:3000/api/v1", {
-        method: "POST",
-        body: JSON.stringify({ word }),
+        method: "PUT",
+        body: JSON.stringify({ text }),
       });
       if (!res.ok) return "Sorry, I couldn't find the meaning.";
       const data = await res.json();
@@ -24,59 +34,97 @@ function App() {
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
-    const userMsg = { sender: "user", text: input };
+    const userMsg = {
+      sender: "user",
+      text: input,
+      id: `user-${Date.now()}`,
+    };
     setMessages((msgs) => [...msgs, userMsg]);
     setLoading(true);
     const meaning = await fetchMeaning(input.trim());
-    setMessages((msgs) => [...msgs, { sender: "bot", text: meaning }]);
+    setMessages((msgs) => [
+      ...msgs,
+      {
+        sender: "bot",
+        text: meaning,
+        id: `bot-${Date.now()}`,
+      },
+    ]);
     setInput("");
     setLoading(false);
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-4 border rounded shadow">
-      <h1 className="text-2xl font-bold mb-4">Word Meaning Chatbot</h1>
-      <div className="h-64 overflow-y-auto bg-gray-50 p-2 mb-4 rounded">
-        {messages.map((msg, i) => (
+    <div className="flex flex-col h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 p-4">
+        <h1 className="text-xl font-semibold text-center text-gray-800">
+          Dictionary Chat
+        </h1>
+      </header>
+
+      {/* Chat area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((msg) => (
           <div
-            key={i}
-            className={
-              msg.sender === "user"
-                ? "text-right mb-2"
-                : "text-left mb-2 text-blue-700"
-            }
+            key={msg.id}
+            className={`flex ${
+              msg.sender === "user" ? "justify-end" : "justify-start"
+            }`}
           >
-            <span
-              className={
+            <div
+              className={`max-w-[80%] px-4 py-3 rounded-lg ${
                 msg.sender === "user"
-                  ? "inline-block bg-blue-100 px-3 py-1 rounded"
-                  : "inline-block bg-gray-200 px-3 py-1 rounded"
-              }
+                  ? "bg-blue-600 text-white rounded-br-none"
+                  : "bg-gray-200 text-gray-800 rounded-bl-none"
+              }`}
             >
               {msg.text}
-            </span>
+            </div>
           </div>
         ))}
         {loading && (
-          <div className="text-left text-gray-400">Bot is typing...</div>
+          <div className="flex justify-start">
+            <div className="bg-gray-200 text-gray-800 px-4 py-3 rounded-lg rounded-bl-none max-w-[80%]">
+              <div className="flex space-x-2">
+                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" />
+                <div
+                  className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                  style={{ animationDelay: "0.2s" }}
+                />
+                <div
+                  className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                  style={{ animationDelay: "0.4s" }}
+                />
+              </div>
+            </div>
+          </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
-      <form onSubmit={handleSend} className="flex gap-2">
-        <input
-          className="flex-1 border rounded px-2 py-1"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type an English word..."
-          disabled={loading}
-        />
-        <button
-          className="bg-blue-500 text-white px-4 py-1 rounded disabled:opacity-50"
-          type="submit"
-          disabled={loading || !input.trim()}
+
+      {/* Input area */}
+      <div className="bg-white border-t border-gray-200 p-4">
+        <form
+          onSubmit={handleSend}
+          className="flex space-x-2 max-w-4xl mx-auto"
         >
-          Send
-        </button>
-      </form>
+          <input
+            className="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type an English word..."
+            disabled={loading}
+          />
+          <button
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            type="submit"
+            disabled={loading || !input.trim()}
+          >
+            Send
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
