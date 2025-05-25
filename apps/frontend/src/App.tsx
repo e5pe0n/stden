@@ -20,7 +20,10 @@ function App() {
   async function fetchMeaning(text: string) {
     try {
       const res = await fetch("http://localhost:3000/api/v1", {
-        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
         body: JSON.stringify({ text }),
       });
       if (!res.ok) return "Sorry, I couldn't find the meaning.";
