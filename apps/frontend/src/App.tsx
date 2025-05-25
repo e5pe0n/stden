@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 function App() {
   const [messages, setMessages] = useState([
@@ -76,13 +78,17 @@ function App() {
             }`}
           >
             <div
-              className={`max-w-[80%] px-4 py-3 rounded-lg ${
+              // Use `prose` and `@plugin "@tailwindcss/typography"` to prevent tailwind from polluting markdown by preflight
+              // cf. https://tailwindcss.com/docs/preflight
+              className={`prose max-w-[80%] px-4 py-3 rounded-lg ${
                 msg.sender === "user"
                   ? "bg-blue-600 text-white rounded-br-none"
                   : "bg-gray-200 text-gray-800 rounded-bl-none"
               }`}
             >
-              {msg.text}
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {msg.text}
+              </ReactMarkdown>
             </div>
           </div>
         ))}
