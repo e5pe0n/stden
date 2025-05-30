@@ -1,23 +1,23 @@
 {
-	"name": "@e5pe0n/stden",
-	"type": "module",
-	"scripts": {
-		"dev:be": "pnpm --filter backend dev",
-		"dev:fe": "pnpm --filter frontend dev",
-		"lint": "biome check",
-		"lint:fix": "biome check --fix",
-		"type": "pnpm -r type",
-		"type:be": "pnpm --filter backend type",
-		"type:fe": "pnpm --filter frontend type",
-		"db:generate": "dotenv -- pnpm --filter backend db:generate",
-		"db:migrate": "dotenv -- pnpm --filter backend db:migrate",
-		"db:deploy": "dotenv -- pnpm --filter backend db:deploy",
-		"db:reset": "dotenv -- pnpm --filter backend db:reset"
-	},
-	"devDependencies": {
-		"@biomejs/biome": "1.9.4",
-		"dotenv-cli": "8.0.0",
-		"typescript": "catalog:"
-	},
-	"packageManager": "pnpm@10.6.3"
+  "name": "@e5pe0n/stden",
+  "type": "module",
+  "scripts": {
+    "dev:be": "pnpm --filter backend dev",
+    "dev:fe": "pnpm --filter frontend dev",
+    "lint": "biome check",
+    "lint:fix": "biome check --fix",
+    "type": "pnpm -r type",
+    "type:be": "pnpm --filter backend type",
+    "type:fe": "pnpm --filter frontend type",
+    "db:generate": "dotenv -- pnpm --filter backend db:generate",
+    "db:migrate": "dotenv -- pnpm --filter backend db:migrate",
+    "db:deploy": "dotenv -- pnpm --filter backend db:deploy",
+    "db:reset": "dotenv -- pnpm --filter backend db:reset"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "dotenv-cli": "8.0.0",
+    "typescript": "catalog:"
+  },
+  "packageManager": "pnpm@10.6.3"
 }
