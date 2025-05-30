@@ -1,6 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
 import "dotenv/config";
-import fs from "node:fs/promises";
 import cors from "@fastify/cors";
 import Fastify from "fastify";
 import { z } from "zod";
@@ -73,15 +72,6 @@ fastify.post("/api/v1", async (request, reply) => {
       input,
       output,
     });
-
-    await fs
-      .writeFile(
-        `../logs/genai/${text}-${Date.now()}.json`,
-        JSON.stringify(response, null, 2),
-      )
-      .catch((err) => {
-        request.log.error("Failed to write log file:", err);
-      });
 
     return {
       text: output,
