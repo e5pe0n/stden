@@ -2,24 +2,24 @@ import { type Prisma, PrismaClient } from "../generated/prisma/index.js";
 
 const prisma = new PrismaClient();
 
-export function insertMeaning(data: Prisma.MeaningCreateInput) {
-	return prisma.meaning.create({
+export function insertMeaning(data: Prisma.meaningsCreateInput) {
+	return prisma.meanings.create({
 		data,
 	});
 }
 
 export function updateMeaning(
-	data: Prisma.MeaningUpdateInput,
-	where: Prisma.MeaningWhereUniqueInput,
+	data: Prisma.meaningsUpdateInput,
+	where: Prisma.meaningsWhereUniqueInput,
 ) {
-	return prisma.meaning.update({
+	return prisma.meanings.update({
 		data,
 		where,
 	});
 }
 
-export function findMeaning(where: Prisma.MeaningWhereUniqueInput) {
-	return prisma.meaning.findUnique({
+export function findMeaning(where: Prisma.meaningsWhereUniqueInput) {
+	return prisma.meanings.findUnique({
 		where,
 	});
 }
