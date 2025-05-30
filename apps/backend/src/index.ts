@@ -1,13 +1,8 @@
-import { GoogleGenAI } from "@google/genai";
 import "dotenv/config";
 import cors from "@fastify/cors";
 import Fastify from "fastify";
-import { z } from "zod";
-import { insertMeaning } from "./db.js";
-
-const ai = new GoogleGenAI({
-  apiKey: process.env.GOOGLE_GENAI_API_KEY,
-});
+import { handleMeaning } from "./meaning.js";
+import { ask } from "./genai.js";
 
 const PORT = process.env.PORT || 3000;
 
@@ -21,22 +16,6 @@ await fastify.register(cors, {
   origin: true, // Allow all origins
 });
 
-const schema = z
-  .object({
-    candidates: z.array(
-      z.object({
-        content: z.object({
-          parts: z.array(
-            z.object({
-              text: z.string(),
-            }),
-          ),
-        }),
-      }),
-    ),
-  })
-  .passthrough();
-
 // Implement POST endpoint at /api/v1
 fastify.post("/api/v1", async (request, reply) => {
   const { text } = request.body as { text: string };
@@ -45,43 +24,19 @@ fastify.post("/api/v1", async (request, reply) => {
     return reply.code(400).send({ error: "Missing required field: text" });
   }
 
-  try {
-    const input = `"${text}" meaning with example sentences, Japanese translation and synonyms.`;
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: input,
-    });
+  const res = await handleMeaning({
+    word: text,
+    ask,
+  });
 
-    // Validate response structure
-    const parsedResponse = schema.safeParse(response);
-    if (!parsedResponse.success) {
-      request.log.error("Invalid response structure:", parsedResponse.error);
-      return reply.code(500).send({
-        error: "Invalid response structure from AI",
-      });
-    }
-
-    const output = parsedResponse.data.candidates[0]?.content.parts[0]?.text;
-
-    if (!output) {
-      return reply.code(500).send({ error: "No text found in AI response" });
-    }
-
-    await insertMeaning({
-      word: text,
-      input,
-      output,
-    });
-
-    return {
-      text: output,
-    };
-  } catch (error) {
-    request.log.error(error);
-    return reply
-      .code(500)
-      .send({ error: "An error occurred during processing" });
+  if (!res.success) {
+    request.log.error(res.error);
+    return reply.code(500).send({ error: "Internal server error" });
   }
+
+  return reply.send({
+    text: res.value,
+  });
 });
 
 // Start the server

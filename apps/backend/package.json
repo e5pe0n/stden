@@ -5,7 +5,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "type": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -19,16 +19,16 @@
   "packageManager": "pnpm@10.6.3",
   "dependencies": {
     "@fastify/cors": "11.0.1",
-    "@google/genai": "^1.0.1",
+    "@google/genai": "1.0.1",
     "@prisma/client": "6.8.2",
-    "dotenv": "^16.5.0",
+    "dotenv": "16.5.0",
     "fastify": "5.3.3",
     "zod": "3.25.28"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "prisma": "6.8.2",
-    "tsx": "^4.19.4",
+    "tsx": "4.19.4",
     "typescript": "catalog:"
   }
 }

@@ -140,3 +140,5 @@ dist
 **/generated/prisma
 
 db_data
+
+**/logs
