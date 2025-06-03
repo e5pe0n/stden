@@ -1,0 +1,30 @@
+FROM node:22-slim AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN npm i -g pnpm@10.6.3
+
+FROM base AS build
+COPY . /usr/src/app
+WORKDIR /usr/src/app
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+RUN pnpm run db:generate
+RUN pnpm deploy --legacy --filter=frontend /prod/frontend
+RUN pnpm deploy --legacy --filter=backend /prod/backend
+
+FROM base AS frontend
+COPY --from=build /prod/frontend /prod/frontend
+WORKDIR /prod/frontend
+EXPOSE 5173
+CMD [ "pnpm", "dev" ]
+
+FROM base AS backend
+COPY --from=build /prod/backend /prod/backend
+WORKDIR /prod/backend
+EXPOSE 3000
+CMD [ "pnpm", "dev" ]
+
+FROM base AS db_migration
+COPY --from=build /prod/backend /prod/backend
+WORKDIR /prod/backend
+CMD [ "pnpm", "db:deploy" ]
+

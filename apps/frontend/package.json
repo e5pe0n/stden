@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "start": "serve -s -l 5173 ./dist",
     "dev": "vite",
     "type": "tsc --noEmit",
     "build": "tsc -b && vite build",
@@ -15,7 +16,9 @@
     "react-dom": "19.1.0",
     "react-markdown": "10.1.0",
     "remark-gfm": "4.0.1",
-    "tailwindcss": "4.1.7"
+    "serve": "14.2.4",
+    "tailwindcss": "4.1.7",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@tailwindcss/typography": "0.5.16",

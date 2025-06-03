@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { config } from "./config";
 
 function App() {
   const [messages, setMessages] = useState([
@@ -21,7 +22,7 @@ function App() {
 
   async function fetchMeaning(text: string) {
     try {
-      const res = await fetch("http://localhost:3000/api/v1", {
+      const res = await fetch(config.backendApiEndpoint, {
         headers: {
           "Content-Type": "application/json",
         },

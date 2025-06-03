@@ -9,3 +9,75 @@ services:
       - ./db_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stden_prod
+
+  db_migration:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: db_migration
+    env_file:
+      - ./apps/backend/.env.prod
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - stden_prod
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: backend
+    env_file:
+      - ./apps/backend/.env.prod
+    develop:
+      watch:
+        - path: ./apps/backend
+          action: sync
+          target: /prod/backend
+          ignore:
+            - node_modules
+        - path: ./apps/backend/package.json
+          action: rebuild
+    depends_on:
+      db_migration:
+        condition: service_completed_successfully
+    ports:
+      - "3000:3000"
+    networks:
+      - stden_prod
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: frontend
+    env_file:
+      - ./apps/frontend/.env.prod
+    develop:
+      watch:
+        - path: ./apps/frontend
+          action: sync
+          target: /prod/frontend
+          ignore:
+            - node_modules
+        - path: ./apps/frontend/package.json
+          action: rebuild
+    depends_on:
+      - backend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "5173:5173"
+    networks:
+      - stden_prod
+
+networks:
+  stden_prod:
