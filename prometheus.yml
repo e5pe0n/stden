@@ -1,0 +1,7 @@
+scrape_configs:
+  - job_name: "stden"
+    scrape_interval: 5s
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - backend:9464

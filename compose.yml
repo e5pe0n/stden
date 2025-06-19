@@ -6,7 +6,7 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=postgres
     volumes:
-      - ./db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
@@ -14,8 +14,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - stden_prod
 
   db_migration:
     build:
@@ -27,8 +25,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    networks:
-      - stden_prod
 
   backend:
     build:
@@ -37,22 +33,23 @@ services:
       target: backend
     env_file:
       - ./apps/backend/.env.prod
-    develop:
-      watch:
-        - path: ./apps/backend
-          action: sync
-          target: /prod/backend
-          ignore:
-            - node_modules
-        - path: ./apps/backend/package.json
-          action: rebuild
+    restart: always
+    # develop:
+    #   watch:
+    #     - path: ./apps/backend
+    #       action: sync
+    #       target: /prod/backend
+    #       ignore:
+    #         - node_modules
+    #     - path: ./apps/backend/package.json
+    #       action: rebuild
     depends_on:
       db_migration:
         condition: service_completed_successfully
+      grafana:
+        condition: service_healthy
     ports:
-      - "3000:3000"
-    networks:
-      - stden_prod
+      - "8000:8000"
 
   frontend:
     build:
@@ -61,23 +58,82 @@ services:
       target: frontend
     env_file:
       - ./apps/frontend/.env.prod
-    develop:
-      watch:
-        - path: ./apps/frontend
-          action: sync
-          target: /prod/frontend
-          ignore:
-            - node_modules
-        - path: ./apps/frontend/package.json
-          action: rebuild
+    restart: always
+    # develop:
+    #   watch:
+    #     - path: ./apps/frontend
+    #       action: sync
+    #       target: /prod/frontend
+    #       ignore:
+    #         - node_modules
+    #     - path: ./apps/frontend/package.json
+    #       action: rebuild
     depends_on:
       - backend
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
       - "5173:5173"
-    networks:
-      - stden_prod
 
-networks:
-  stden_prod:
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+      - --enable-feature=exemplar-storage
+      - --enable-feature=native-histograms
+    ports:
+      - "9090:9090"
+
+  # Tempo runs as user 10001, and docker compose creates the volume as root.
+  # As such, we need to chown the volume in order for Tempo to start correctly.
+  init:
+    image: &tempoImage grafana/tempo:latest
+    user: root
+    entrypoint:
+      - "chown"
+      - "10001:10001"
+      - "/var/tempo"
+    volumes:
+      - ./tempo_data:/var/tempo
+
+  tempo:
+    image: *tempoImage
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml
+      - tempo_data:/var/tempo
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
+    depends_on:
+      - init
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - grafana_storage:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+      - tempo
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  grafana_storage:
+  tempo_data:
+  db_data:

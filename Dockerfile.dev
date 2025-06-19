@@ -15,13 +15,13 @@ FROM base AS frontend
 COPY --from=build /prod/frontend /prod/frontend
 WORKDIR /prod/frontend
 EXPOSE 5173
-CMD [ "pnpm", "dev" ]
+CMD [ "pnpm", "dev", "--host", "0.0.0.0" ]
 
 FROM base AS backend
 COPY --from=build /prod/backend /prod/backend
 WORKDIR /prod/backend
 EXPOSE 3000
-CMD [ "pnpm", "dev" ]
+CMD [ "pnpm", "dev:tel" ]
 
 FROM base AS db_migration
 COPY --from=build /prod/backend /prod/backend

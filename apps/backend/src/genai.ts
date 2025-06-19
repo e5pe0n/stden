@@ -2,10 +2,10 @@ import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 import type { Result } from "./types.js";
 import fs from "node:fs";
-import { config } from "./config.js";
+import { appConfig } from "./configs/app.js";
 
 const ai = new GoogleGenAI({
-  apiKey: config.googleGenAiApiKey,
+  apiKey: appConfig.googleGenAiApiKey,
 });
 
 const genaiRespSchema = z
