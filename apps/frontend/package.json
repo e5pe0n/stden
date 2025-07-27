@@ -25,13 +25,14 @@
     "@types/react": "19.1.2",
     "@types/react-dom": "19.1.2",
     "@vitejs/plugin-react": "4.4.1",
-    "daisyui": "5.0.37",
     "globals": "16.0.0",
     "msw": "2.8.4",
     "typescript": "catalog:",
     "vite": "6.3.5"
   },
   "msw": {
-    "workerDirectory": ["public"]
+    "workerDirectory": [
+      "public"
+    ]
   }
 }
