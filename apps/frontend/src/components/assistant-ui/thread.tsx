@@ -170,9 +170,27 @@ const ThreadSuggestionItem: FC = () => {
 
 const Composer: FC = () => {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const historyIndexRef = useRef(-1);
+  const draftBeforeHistoryRef = useRef("");
   const [slashQuery, setSlashQuery] = useState("");
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const threadMessages = useAuiState((s) => s.thread.messages);
+  const userInputHistory = useMemo(
+    () =>
+      threadMessages
+        .filter((message) => message.role === "user")
+        .map((message) =>
+          message.content
+            .filter((part) => part.type === "text")
+            .map((part) => (part.type === "text" ? part.text : ""))
+            .join("\n")
+            .trim(),
+        )
+        .filter(Boolean),
+    [threadMessages],
+  );
 
   const filteredAskTypes = useMemo(
     () => ASK_TYPES.filter((type) => type.startsWith(slashQuery.toLowerCase())),
@@ -185,11 +203,10 @@ const Composer: FC = () => {
     setSelectedIndex(0);
   };
 
-  const insertSlashCommand = (type: (typeof ASK_TYPES)[number]) => {
+  const setComposerValue = (nextValue: string) => {
     const input = inputRef.current;
     if (!input) return;
 
-    const nextValue = `/${type} `;
     const descriptor = Object.getOwnPropertyDescriptor(
       HTMLTextAreaElement.prototype,
       "value",
@@ -198,6 +215,10 @@ const Composer: FC = () => {
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.focus();
     input.setSelectionRange(nextValue.length, nextValue.length);
+  };
+
+  const insertSlashCommand = (type: (typeof ASK_TYPES)[number]) => {
+    setComposerValue(`/${type} `);
     closeSlashMenu();
   };
 
@@ -219,32 +240,66 @@ const Composer: FC = () => {
   const onComposerInputKeyDown = (
     event: KeyboardEvent<HTMLTextAreaElement>,
   ) => {
-    if (!showSlashMenu || filteredAskTypes.length === 0) return;
+    if (showSlashMenu && filteredAskTypes.length > 0) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setSelectedIndex((index) => (index + 1) % filteredAskTypes.length);
+        return;
+      }
 
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setSelectedIndex((index) => (index + 1) % filteredAskTypes.length);
-      return;
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setSelectedIndex(
+          (index) =>
+            (index - 1 + filteredAskTypes.length) % filteredAskTypes.length,
+        );
+        return;
+      }
+
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        insertSlashCommand(filteredAskTypes[selectedIndex]!);
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeSlashMenu();
+        return;
+      }
     }
 
     if (event.key === "ArrowUp") {
+      if (userInputHistory.length === 0) return;
+
       event.preventDefault();
-      setSelectedIndex(
-        (index) =>
-          (index - 1 + filteredAskTypes.length) % filteredAskTypes.length,
-      );
+      if (historyIndexRef.current === -1) {
+        draftBeforeHistoryRef.current = event.currentTarget.value;
+        historyIndexRef.current = userInputHistory.length - 1;
+      } else if (historyIndexRef.current > 0) {
+        historyIndexRef.current -= 1;
+      }
+
+      setComposerValue(userInputHistory[historyIndexRef.current] ?? "");
       return;
     }
 
-    if (event.key === "Enter" || event.key === "Tab") {
+    if (event.key === "ArrowDown") {
+      if (historyIndexRef.current === -1) return;
+
       event.preventDefault();
-      insertSlashCommand(filteredAskTypes[selectedIndex]!);
+      if (historyIndexRef.current < userInputHistory.length - 1) {
+        historyIndexRef.current += 1;
+        setComposerValue(userInputHistory[historyIndexRef.current] ?? "");
+      } else {
+        historyIndexRef.current = -1;
+        setComposerValue(draftBeforeHistoryRef.current);
+      }
       return;
     }
 
-    if (event.key === "Escape") {
-      event.preventDefault();
-      closeSlashMenu();
+    if (historyIndexRef.current !== -1 && event.key.length === 1) {
+      historyIndexRef.current = -1;
     }
   };
 
