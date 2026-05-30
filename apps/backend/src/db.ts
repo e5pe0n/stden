@@ -1,6 +1,14 @@
+import { PrismaPg } from "@prisma/adapter-pg";
 import { type Prisma, PrismaClient } from "../generated/prisma/index.js";
+import { config } from "./config.js";
 
-const prisma = new PrismaClient();
+const adapter = new PrismaPg({
+  connectionString: config.databaseUrl,
+});
+
+const prisma = new PrismaClient({
+  adapter,
+});
 
 export function insertMeaning(data: Prisma.meaningsCreateInput) {
   return prisma.meanings.create({

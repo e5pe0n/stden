@@ -1,12 +1,12 @@
 services:
   db:
-    image: postgres:17
+    image: postgres:18
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=postgres
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql
     ports:
       - "5432:5432"
     healthcheck:
@@ -23,7 +23,7 @@ services:
       dockerfile: Dockerfile.dev
       target: db_migration
     env_file:
-      - ./apps/backend/.env.prod
+      - ./apps/backend/.env
     depends_on:
       db:
         condition: service_healthy
@@ -36,7 +36,7 @@ services:
       dockerfile: Dockerfile.dev
       target: backend
     env_file:
-      - ./apps/backend/.env.prod
+      - ./apps/backend/.env
     develop:
       watch:
         - path: ./apps/backend
@@ -60,7 +60,7 @@ services:
       dockerfile: Dockerfile.dev
       target: frontend
     env_file:
-      - ./apps/frontend/.env.prod
+      - ./apps/frontend/.env
     develop:
       watch:
         - path: ./apps/frontend

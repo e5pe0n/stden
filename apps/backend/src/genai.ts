@@ -26,7 +26,7 @@ const genaiRespSchema = z
 
 export async function ask(input: string): Promise<Result<string>> {
   const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash-lite",
+    model: "gemini-3.1-flash-lite",
     contents: input,
   });
 

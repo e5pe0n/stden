@@ -2,7 +2,18 @@ packages:
   - "packages/*"
   - "apps/*"
 
+allowBuilds:
+  "@biomejs/biome": true
+  '@google/genai': true
+  "@prisma/client": true
+  "@prisma/engines": true
+  "@tailwindcss/oxide": true
+  esbuild: true
+  msw: true
+  prisma: true
+  protobufjs: true
+
 catalog:
-  "typescript": "5.8.3"
-  "@types/node": "22"
-  "zod": "3.25.28"
+  "typescript": "6.0.3"
+  "@types/node": "25.9.1"
+  "zod": "4.4.3"

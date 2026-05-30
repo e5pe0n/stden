@@ -15,9 +15,9 @@
     "db:reset": "dotenv -- pnpm --filter backend db:reset"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.9.4",
-    "dotenv-cli": "8.0.0",
+    "@biomejs/biome": "2.4.16",
+    "dotenv-cli": "11.0.0",
     "typescript": "catalog:"
   },
-  "packageManager": "pnpm@10.6.3"
+  "packageManager": "pnpm@11.5.0"
 }
