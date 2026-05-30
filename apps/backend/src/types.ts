@@ -9,3 +9,17 @@ export type ErrorResult<E = Error> = {
 };
 
 export type Result<V = unknown, E = Error> = SuccessResult<V> | ErrorResult<E>;
+
+export type AskRequest =
+  | {
+      type: "meaning";
+      input: string;
+    }
+  | {
+      type: "diff";
+      input: string[];
+    }
+  | {
+      type: "free";
+      input: string;
+    };

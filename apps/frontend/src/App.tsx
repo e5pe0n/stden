@@ -7,6 +7,43 @@ import { Thread } from "@/components/assistant-ui/thread";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { config } from "./config";
 
+type AskPayload =
+  | { type: "meaning"; input: string }
+  | { type: "diff"; input: string[] }
+  | { type: "free"; input: string };
+
+function parseAskPayload(rawText: string): AskPayload | null {
+  const text = rawText.trim();
+  if (!text) return null;
+
+  const slashMatch = text.match(/^\/(meaning|diff|free)\s+(.*)$/i);
+  if (!slashMatch) {
+    return { type: "meaning", input: text };
+  }
+
+  const mode = slashMatch[1].toLowerCase() as "meaning" | "diff" | "free";
+  const rest = slashMatch[2].trim();
+  if (!rest) return null;
+
+  if (mode === "diff") {
+    const words = rest
+      .split(/,|\n|\s+vs\s+/i)
+      .map((word) => word.trim())
+      .filter(Boolean);
+
+    if (words.length < 2) return null;
+    return {
+      type: "diff",
+      input: words,
+    };
+  }
+
+  return {
+    type: mode,
+    input: rest,
+  };
+}
+
 const dictionaryAdapter: ChatModelAdapter = {
   async run({ messages, abortSignal }) {
     const userMessages = messages.filter((message) => message.role === "user");
@@ -17,9 +54,16 @@ const dictionaryAdapter: ChatModelAdapter = {
         .map((part) => (part.type === "text" ? part.text : ""))
         .join("\n") ?? "";
 
-    if (!lastUserText.trim()) {
+    const payload = parseAskPayload(lastUserText);
+
+    if (!payload) {
       return {
-        content: [{ type: "text", text: "Please type a word to get started." }],
+        content: [
+          {
+            type: "text",
+            text: "Please enter text. For /diff, provide at least two words (for example: /diff affect, effect).",
+          },
+        ],
       };
     }
 
@@ -29,7 +73,7 @@ const dictionaryAdapter: ChatModelAdapter = {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text: lastUserText }),
+        body: JSON.stringify(payload),
         signal: abortSignal,
       });
 

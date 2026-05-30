@@ -1,10 +1,26 @@
 import "dotenv/config";
 import cors from "@fastify/cors";
 import Fastify from "fastify";
-import { handleMeaning } from "./meaning.js";
+import { z } from "zod";
+import { handleAskByType } from "./meaning.js";
 import { ask } from "./genai.js";
 
 const PORT = process.env.PORT || 3000;
+
+const askSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("meaning"),
+    input: z.string().min(1),
+  }),
+  z.object({
+    type: z.literal("diff"),
+    input: z.array(z.string().min(1)).min(2),
+  }),
+  z.object({
+    type: z.literal("free"),
+    input: z.string().min(1),
+  }),
+]);
 
 // Initialize Fastify server
 const fastify = Fastify({
@@ -18,14 +34,14 @@ await fastify.register(cors, {
 
 // Implement POST endpoint at /api/v1
 fastify.post("/api/v1", async (request, reply) => {
-  const { text } = request.body as { text: string };
+  const parsed = askSchema.safeParse(request.body);
 
-  if (!text) {
-    return reply.code(400).send({ error: "Missing required field: text" });
+  if (!parsed.success) {
+    return reply.code(400).send({ error: "Invalid request body" });
   }
 
-  const res = await handleMeaning({
-    word: text,
+  const res = await handleAskByType({
+    payload: parsed.data,
     ask,
   });
 

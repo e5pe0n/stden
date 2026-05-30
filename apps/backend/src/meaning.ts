@@ -1,5 +1,5 @@
 import { findMeaning, insertMeaning, updateMeaning } from "./db.js";
-import type { Result } from "./types.js";
+import type { AskRequest, Result } from "./types.js";
 
 export async function handleMeaning({
   word,
@@ -19,7 +19,7 @@ export async function handleMeaning({
       return { success: true, value: meaning.output };
     }
 
-    const input = `teach me word "${word}". 1) the meaning 2) example sentences with Japanese translation without romanization and 3) synonyms. only if given word is misspelled then just say "misspelled!" first and enumerate possibly correct words without meaning and or so.`;
+    const input = `Teach me the word "${word}" with this exact structure: 1) meaning 2) at least 3 example sentences 3) synonyms. If the word is misspelled, start with "misspelled!" and list possible correct words only.`;
 
     const res = await ask(input);
     if (res.success && !res.value.match(/misspelled!/)) {
@@ -37,5 +37,42 @@ export async function handleMeaning({
         cause: error,
       }),
     };
+  }
+}
+
+function buildDiffPrompt(words: string[]) {
+  return [
+    `Compare these words and explain their differences: ${words.join(", ")}.`,
+    "Explain when to choose each word in practical situations.",
+    "Include concise example sentences for each word.",
+  ].join(" ");
+}
+
+function buildFreePrompt(input: string) {
+  return input;
+}
+
+export async function handleAskByType({
+  ask,
+  payload,
+}: {
+  payload: AskRequest;
+  ask: (input: string) => Promise<Result<string>>;
+}): Promise<Result<string>> {
+  switch (payload.type) {
+    case "meaning":
+      return handleMeaning({
+        word: payload.input,
+        ask,
+      });
+    case "diff":
+      return ask(buildDiffPrompt(payload.input));
+    case "free":
+      return ask(buildFreePrompt(payload.input));
+    default:
+      return {
+        success: false,
+        error: new Error("Unsupported ask type"),
+      };
   }
 }

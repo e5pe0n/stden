@@ -37,15 +37,9 @@ services:
       target: backend
     env_file:
       - ./apps/backend/.env
-    develop:
-      watch:
-        - path: ./apps/backend
-          action: sync
-          target: /prod/backend
-          ignore:
-            - node_modules
-        - path: ./apps/backend/package.json
-          action: rebuild
+    volumes:
+      - ./apps/backend:/prod/backend
+      - backend_node_modules:/prod/backend/node_modules
     depends_on:
       db_migration:
         condition: service_completed_successfully
@@ -75,6 +69,7 @@ services:
 
 volumes:
   db_data:
+  backend_node_modules:
   frontend_node_modules:
 
 networks:

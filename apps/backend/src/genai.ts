@@ -30,11 +30,6 @@ export async function ask(input: string): Promise<Result<string>> {
     contents: input,
   });
 
-  fs.writeFileSync(
-    `genai_response_${(new Date()).valueOf()}.json`,
-    JSON.stringify(response, null, 2),
-  );
-
   // Validate response structure
   const parsedResponse = genaiRespSchema.safeParse(response);
   if (!parsedResponse.success) {
