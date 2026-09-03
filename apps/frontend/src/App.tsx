@@ -8,7 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { config } from "./config";
 
 type AskPayload =
-  | { type: "meaning"; input: string }
+  | { type: "meaning"; input: string; regenerate?: boolean }
   | { type: "diff"; input: string[] }
   | { type: "free"; input: string };
 
@@ -45,7 +45,7 @@ function parseAskPayload(rawText: string): AskPayload | null {
 }
 
 const dictionaryAdapter: ChatModelAdapter = {
-  async run({ messages, abortSignal }) {
+  async run({ messages, abortSignal, runConfig }) {
     const userMessages = messages.filter((message) => message.role === "user");
     const lastUserMessage = userMessages[userMessages.length - 1];
     const lastUserText =
@@ -55,6 +55,12 @@ const dictionaryAdapter: ChatModelAdapter = {
         .join("\n") ?? "";
 
     const payload = parseAskPayload(lastUserText);
+
+    // The refresh button reloads with `custom.regenerate`, signaling the backend
+    // to bypass the cached meaning and generate fresh content.
+    if (payload?.type === "meaning" && runConfig?.custom?.regenerate === true) {
+      payload.regenerate = true;
+    }
 
     if (!payload) {
       return {

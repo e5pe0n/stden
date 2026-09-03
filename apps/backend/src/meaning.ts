@@ -4,13 +4,15 @@ import type { AskRequest, Result } from "./types.js";
 export async function handleMeaning({
   word,
   ask,
+  regenerate = false,
 }: {
   word: string;
   ask: (input: string) => Promise<Result<string>>;
+  regenerate?: boolean;
 }): Promise<Result<string>> {
   try {
     const meaningOrNull = await findMeaning({ word: word });
-    if (meaningOrNull) {
+    if (meaningOrNull && !regenerate) {
       const meaning = meaningOrNull;
       await updateMeaning(
         { asked_count: meaning.asked_count + 1 },
@@ -19,15 +21,26 @@ export async function handleMeaning({
       return { success: true, value: meaning.output };
     }
 
-    const input = `Teach me the word "${word}" with this exact structure: 1) meaning 2) at least 3 example sentences 3) synonyms. If the word is misspelled, start with "misspelled!" and list possible correct words only.`;
+    const input = `Teach me the word "${word}" with this exact structure: 1) meaning 2) at least 3 example sentences with japanese translation 3) synonyms. If the word is misspelled, start with "misspelled!" and list possible correct words only.`;
 
     const res = await ask(input);
     if (res.success && !res.value.match(/misspelled!/)) {
-      await insertMeaning({
-        word,
-        input,
-        output: res.value,
-      });
+      if (meaningOrNull) {
+        await updateMeaning(
+          {
+            input,
+            output: res.value,
+            asked_count: meaningOrNull.asked_count + 1,
+          },
+          { id: meaningOrNull.id },
+        );
+      } else {
+        await insertMeaning({
+          word,
+          input,
+          output: res.value,
+        });
+      }
     }
     return res;
   } catch (error) {
@@ -64,6 +77,7 @@ export async function handleAskByType({
       return handleMeaning({
         word: payload.input,
         ask,
+        regenerate: payload.regenerate,
       });
     case "diff":
       return ask(buildDiffPrompt(payload.input));

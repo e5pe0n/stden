@@ -14,6 +14,7 @@ export type AskRequest =
   | {
       type: "meaning";
       input: string;
+      regenerate?: boolean;
     }
   | {
       type: "diff";

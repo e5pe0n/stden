@@ -1,26 +1,4 @@
 import {
-  ComposerAddAttachment,
-  ComposerAttachments,
-  UserMessageAttachments,
-} from "@/components/assistant-ui/attachment";
-import { MarkdownText } from "@/components/assistant-ui/markdown-text";
-import {
-  Reasoning,
-  ReasoningContent,
-  ReasoningRoot,
-  ReasoningText,
-  ReasoningTrigger,
-} from "@/components/assistant-ui/reasoning";
-import {
-  ToolGroupContent,
-  ToolGroupRoot,
-  ToolGroupTrigger,
-} from "@/components/assistant-ui/tool-group";
-import { ToolFallback } from "@/components/assistant-ui/tool-fallback";
-import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import {
   ActionBarMorePrimitive,
   ActionBarPrimitive,
   AuiIf,
@@ -31,6 +9,7 @@ import {
   MessagePrimitive,
   SuggestionPrimitive,
   ThreadPrimitive,
+  useAui,
   useAuiState,
 } from "@assistant-ui/react";
 import {
@@ -47,13 +26,35 @@ import {
   SquareIcon,
 } from "lucide-react";
 import {
-  useMemo,
-  useRef,
-  useState,
   type ChangeEvent,
   type FC,
   type KeyboardEvent,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
+import {
+  ComposerAddAttachment,
+  ComposerAttachments,
+  UserMessageAttachments,
+} from "@/components/assistant-ui/attachment";
+import { MarkdownText } from "@/components/assistant-ui/markdown-text";
+import {
+  Reasoning,
+  ReasoningContent,
+  ReasoningRoot,
+  ReasoningText,
+  ReasoningTrigger,
+} from "@/components/assistant-ui/reasoning";
+import { ToolFallback } from "@/components/assistant-ui/tool-fallback";
+import {
+  ToolGroupContent,
+  ToolGroupRoot,
+  ToolGroupTrigger,
+} from "@/components/assistant-ui/tool-group";
+import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const ASK_TYPES = ["meaning", "diff", "free"] as const;
 
@@ -476,6 +477,28 @@ const AssistantMessage: FC = () => {
   );
 };
 
+const RefreshAction: FC = () => {
+  const aui = useAui();
+  const disabled = useAuiState(
+    (s) =>
+      s.thread.isRunning ||
+      s.thread.isDisabled ||
+      s.message.role !== "assistant",
+  );
+
+  return (
+    <TooltipIconButton
+      tooltip="Refresh"
+      disabled={disabled}
+      onClick={() =>
+        aui.message().reload({ runConfig: { custom: { regenerate: true } } })
+      }
+    >
+      <RefreshCwIcon />
+    </TooltipIconButton>
+  );
+};
+
 const AssistantActionBar: FC = () => {
   return (
     <ActionBarPrimitive.Root
@@ -491,11 +514,7 @@ const AssistantActionBar: FC = () => {
           <CopyIcon />
         </AuiIf>
       </ActionBarPrimitive.Copy>
-      <ActionBarPrimitive.Reload
-        render={<TooltipIconButton tooltip="Refresh" />}
-      >
-        <RefreshCwIcon />
-      </ActionBarPrimitive.Reload>
+      <RefreshAction />
       <ActionBarMorePrimitive.Root>
         <ActionBarMorePrimitive.Trigger
           render={
