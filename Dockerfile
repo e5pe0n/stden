@@ -1,30 +1,53 @@
-FROM node:24-slim AS base
+# syntax=docker/dockerfile:1
+
+# node:24-slim, pinned by digest so rebuilds are reproducible.
+FROM node:24-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e AS base
+# Prisma's engine needs libssl, and node:24-slim ships neither it nor the
+# system CA bundle.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN npm i -g pnpm@10.6.3
+# corepack activates whatever pnpm version the root package.json
+# "packageManager" field pins, so the image can never drift from the lockfile.
+RUN corepack enable
 
 FROM base AS build
-COPY . /usr/src/app
 WORKDIR /usr/src/app
+COPY . .
+RUN corepack prepare --activate
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
-RUN pnpm run db:generate
+# Call the workspace script directly. The root `db:generate` routes through
+# `dotenv --`, but .dockerignore excludes .env* so there is nothing to load.
+RUN pnpm --filter backend db:generate
 RUN pnpm run -r build
-RUN pnpm deploy --legacy --filter=frontend --prod /prod/frontend
+# Runtime dependencies only — this becomes the app image.
 RUN pnpm deploy --legacy --filter=backend --prod /prod/backend
+# A second deploy that KEEPS devDependencies. `prisma` is a devDependency, so
+# a --prod deploy would leave the migration image with no CLI to run.
+RUN pnpm deploy --legacy --filter=backend /prod/backend-migrate
 
-FROM base AS frontend
-COPY --from=build /prod/frontend /prod/frontend
-WORKDIR /prod/frontend
-EXPOSE 5173
-CMD [ "pnpm", "start" ]
-
-FROM base AS backend
+# The application: Fastify serves the API and the built SPA from one origin.
+FROM base AS app
+# Links the GHCR package to this repository (shows in the repo's Packages
+# sidebar and records provenance).
+LABEL org.opencontainers.image.source="https://github.com/e5pe0n/stden"
+ENV NODE_ENV=production
 COPY --from=build /prod/backend /prod/backend
+COPY --from=build /usr/src/app/apps/frontend/dist /prod/backend/public
 WORKDIR /prod/backend
+ENV STATIC_DIR=/prod/backend/public
 EXPOSE 3000
-CMD [ "pnpm", "start" ]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+# Invoke node directly: no pnpm needed at runtime.
+CMD ["node", "dist/index.js"]
 
+# One-shot migration job. Must exit 0 before the app starts.
 FROM base AS db_migration
-COPY --from=build /prod/backend /prod/backend
+LABEL org.opencontainers.image.source="https://github.com/e5pe0n/stden"
+ENV NODE_ENV=production
+COPY --from=build /prod/backend-migrate /prod/backend
 WORKDIR /prod/backend
-CMD [ "pnpm", "db:deploy" ]
+CMD ["node_modules/.bin/prisma", "migrate", "deploy"]

@@ -1,0 +1,61 @@
+# Production stack for the mini PC. Deployed to /opt/stden alongside a .env
+# holding the secrets (see env.example) — secrets never live in this file,
+# in the image, or in GitHub.
+#
+# Reachability: nothing is published beyond loopback. `tailscale serve`
+# proxies from the host to 127.0.0.1:3000, so the app is reachable from the
+# tailnet and from nowhere else.
+
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: stden
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+      POSTGRES_DB: stden
+    volumes:
+      # Postgres 18+ requires the mount at /var/lib/postgresql, NOT at
+      # .../data. The image stores the cluster in a version-specific
+      # subdirectory so `pg_upgrade --link` works without crossing a mount
+      # boundary, and it refuses to start if it finds a mount at /data.
+      - db_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stden -d stden"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    # Deliberately no `ports:` — the database is reachable only on the
+    # compose network.
+
+  db_migration:
+    image: ghcr.io/e5pe0n/stden-migrate:${IMAGE_TAG:?required}
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?required}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    image: ghcr.io/e5pe0n/stden:${IMAGE_TAG:?required}
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?required}
+      GOOGLE_GEN_AI_API_KEY: ${GOOGLE_GEN_AI_API_KEY:?required}
+      PORT: 3000
+      # Same-origin in production: the SPA is served by this process, so no
+      # cross-origin request is ever made and CORS stays off.
+      CORS_ORIGIN: ""
+    depends_on:
+      db_migration:
+        # A failed migration stops the rollout before new code serves traffic.
+        condition: service_completed_successfully
+    ports:
+      # Loopback ONLY. Docker's DOCKER-USER iptables rules bypass ufw, so an
+      # explicit bind address is the only reliable way to keep this off the
+      # LAN — a firewall rule will not do it.
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped
+
+volumes:
+  db_data:

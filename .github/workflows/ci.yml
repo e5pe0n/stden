@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+# Least privilege: this workflow only reads code. It holds no secrets, so it
+# is safe to run on pull requests from forks.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      # Third-party actions are pinned to full commit SHAs, not tags — tags
+      # are mutable and this repository is public.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      # Must run before typecheck and build: the generated Prisma client is
+      # gitignored, so both fail without it.
+      - name: Generate Prisma client
+        run: pnpm --filter backend db:generate
+
+      - name: Typecheck
+        run: pnpm type
+
+      - name: Build
+        run: pnpm run -r build
