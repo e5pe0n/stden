@@ -1,4 +1,4 @@
-import { http, type HttpHandler, HttpResponse } from "msw";
+import { type HttpHandler, HttpResponse, http } from "msw";
 import { setupWorker } from "msw/browser";
 
 const handlers: HttpHandler[] = [

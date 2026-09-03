@@ -1,6 +1,10 @@
 "use client";
 
-import { memo, useCallback, useRef, useState } from "react";
+import {
+  type ToolCallMessagePartComponent,
+  type ToolCallMessagePartStatus,
+  useScrollLock,
+} from "@assistant-ui/react";
 import {
   AlertCircleIcon,
   CheckIcon,
@@ -8,11 +12,7 @@ import {
   LoaderIcon,
   XCircleIcon,
 } from "lucide-react";
-import {
-  useScrollLock,
-  type ToolCallMessagePartStatus,
-  type ToolCallMessagePartComponent,
-} from "@assistant-ui/react";
+import { memo, useCallback, useRef, useState } from "react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -315,10 +315,10 @@ ToolFallback.Error = ToolFallbackError;
 
 export {
   ToolFallback,
+  ToolFallbackArgs,
+  ToolFallbackContent,
+  ToolFallbackError,
+  ToolFallbackResult,
   ToolFallbackRoot,
   ToolFallbackTrigger,
-  ToolFallbackContent,
-  ToolFallbackArgs,
-  ToolFallbackResult,
-  ToolFallbackError,
 };
