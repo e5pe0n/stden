@@ -37,18 +37,18 @@ jobs:
       # per run, expires within the hour, is revoked when the job ends, and is
       # narrowed here to the two permissions this workflow actually uses.
       #
-      # Set the WORDLIST_APP_CLIENT_ID variable and WORDLIST_APP_PRIVATE_KEY
+      # Set the E5PE0N_APP_CLIENT_ID variable and E5PE0N_APP_PRIVATE_KEY
       # secret to turn it on. Without them the job falls back to GITHUB_TOKEN
       # and the monthly pull request waits for a human instead of merging.
       - name: Mint an app installation token
         id: app-token
-        if: vars.WORDLIST_APP_CLIENT_ID != ''
+        if: vars.E5PE0N_APP_CLIENT_ID != ''
         # Third-party actions are pinned to full commit SHAs, not tags — tags
         # are mutable and this repository is public.
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          client-id: ${{ vars.WORDLIST_APP_CLIENT_ID }}
-          private-key: ${{ secrets.WORDLIST_APP_PRIVATE_KEY }}
+          client-id: ${{ vars.E5PE0N_APP_CLIENT_ID }}
+          private-key: ${{ secrets.E5PE0N_APP_PRIVATE_KEY }}
           permission-contents: write
           permission-pull-requests: write
 
