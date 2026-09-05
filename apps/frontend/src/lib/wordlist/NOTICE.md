@@ -11,8 +11,8 @@ pnpm --filter frontend wordlist:generate
 
 The generator lives at `apps/frontend/scripts/generate-wordlist.ts`. It never runs from `dev`, `build`
 or Docker, so the build stays offline and the shipped bytes are reviewable in git. The
-`Refresh word list` workflow runs it on the 1st of each month and opens a pull request when upstream
-has changed something.
+`Refresh word list` workflow runs it on the 1st of each month; when upstream has changed something it
+opens a pull request and merges it, once the frontend has been built against the new list.
 
 ## Format
 
