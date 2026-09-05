@@ -383,14 +383,23 @@ const Composer: FC = () => {
     // Leave the IME candidate window alone.
     if (event.nativeEvent.isComposing) return;
 
+    // Emacs-style aliases for the arrow keys, but only while the menu is open:
+    // outside it Ctrl+P/Ctrl+N stay whatever the platform makes of them.
+    const isMenuKey = (arrowKey: string, emacsKey: string) =>
+      event.key === arrowKey ||
+      (event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        event.key.toLowerCase() === emacsKey);
+
     if (items.length > 0) {
-      if (event.key === "ArrowDown") {
+      if (isMenuKey("ArrowDown", "n")) {
         event.preventDefault();
         highlight((activeIndex + 1) % items.length);
         return;
       }
 
-      if (event.key === "ArrowUp") {
+      if (isMenuKey("ArrowUp", "p")) {
         event.preventDefault();
         highlight((activeIndex - 1 + items.length) % items.length);
         return;
