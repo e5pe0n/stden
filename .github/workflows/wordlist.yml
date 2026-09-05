@@ -29,17 +29,6 @@ jobs:
         # Also sets pipefail, so a failing generator is not masked by `tee`.
         shell: bash
     steps:
-      # GITHUB_TOKEN cannot start a workflow run, so a pull request it opens
-      # never gets the `check` status that the develop ruleset requires, and
-      # auto-merge waits on it forever. A GitHub App installation token has no
-      # such restriction: CI runs on the pull request and the merge happens on
-      # its own. Unlike a personal access token it belongs to no one, is minted
-      # per run, expires within the hour, is revoked when the job ends, and is
-      # narrowed here to the two permissions this workflow actually uses.
-      #
-      # Set the E5PE0N_APP_CLIENT_ID variable and E5PE0N_APP_PRIVATE_KEY
-      # secret to turn it on. Without them the job falls back to GITHUB_TOKEN
-      # and the monthly pull request waits for a human instead of merging.
       - name: Mint an app installation token
         id: app-token
         if: vars.E5PE0N_APP_CLIENT_ID != ''
