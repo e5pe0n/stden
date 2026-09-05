@@ -9,8 +9,10 @@ Regenerate it with:
 pnpm --filter frontend wordlist:generate
 ```
 
-The generator lives at `apps/frontend/scripts/generate-wordlist.ts`. It runs by hand only — never from
-`dev`, `build`, CI or Docker — so the build stays offline and the shipped bytes are reviewable in git.
+The generator lives at `apps/frontend/scripts/generate-wordlist.ts`. It never runs from `dev`, `build`
+or Docker, so the build stays offline and the shipped bytes are reviewable in git. The
+`Refresh word list` workflow runs it on the 1st of each month and opens a pull request when upstream
+has changed something.
 
 ## Format
 

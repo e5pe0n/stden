@@ -24,6 +24,11 @@ const SPELLING_URL =
   "https://app.aspell.net/create?max_size=60&spelling=US&max_variant=0&diacritic=strip&download=wordlist&encoding=utf-8&format=inline";
 const FREQUENCY_URL = "https://norvig.com/ngrams/count_1w.txt";
 
+// A floor well below the ~79k the sources currently yield. It exists for the
+// unattended monthly refresh: a truncated or reshaped upstream response should
+// fail the run, not quietly ship a gutted dictionary.
+const MIN_WORDS = 50_000;
+
 // The inline SCOWL response is a licence header, a line containing only "---",
 // then one word per line.
 const HEADER_SEPARATOR = "\n---\n";
@@ -96,6 +101,12 @@ async function main(): Promise<void> {
       (frequencies.get(b) ?? 0) - (frequencies.get(a) ?? 0) ||
       a.localeCompare(b),
   );
+
+  if (words.length < MIN_WORDS) {
+    throw new Error(
+      `Only ${words.length} words survived filtering, expected at least ${MIN_WORDS}; the upstream response looks wrong.`,
+    );
+  }
 
   const output = `${words.join("\n")}\n`;
   await writeFile(OUTPUT_PATH, output, "utf8");
