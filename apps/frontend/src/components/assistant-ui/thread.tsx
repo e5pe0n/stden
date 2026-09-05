@@ -29,6 +29,9 @@ import {
   type ChangeEvent,
   type FC,
   type KeyboardEvent,
+  type SyntheticEvent,
+  useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -55,6 +58,13 @@ import {
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  getLoadedWordList,
+  getWordTokenAtCaret,
+  loadWordList,
+  searchWords,
+  type WordToken,
+} from "@/lib/word-suggestions";
 
 const ASK_TYPES = ["meaning", "diff", "free"] as const;
 
@@ -169,13 +179,55 @@ const ThreadSuggestionItem: FC = () => {
   );
 };
 
+type AskType = (typeof ASK_TYPES)[number];
+
+type SuggestionMenu =
+  | { kind: "none" }
+  | { kind: "command"; items: readonly AskType[] }
+  | { kind: "word"; items: readonly string[]; token: WordToken };
+
+const NO_ITEMS: readonly string[] = [];
+
+/**
+ * Prefix matches for the word being typed. Only the first query waits for the
+ * dictionary chunk; once it is in memory every keystroke matches during render,
+ * so the list never lags a frame behind what has been typed.
+ */
+const useWordMatches = (query: string | null): readonly string[] => {
+  const [words, setWords] = useState(getLoadedWordList);
+
+  useEffect(() => {
+    if (query === null || words !== null) return;
+
+    let cancelled = false;
+    loadWordList()
+      .then((loaded) => {
+        if (!cancelled) setWords(loaded);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [query, words]);
+
+  return useMemo(
+    () =>
+      query === null || words === null ? NO_ITEMS : searchWords(words, query),
+    [query, words],
+  );
+};
+
 const Composer: FC = () => {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const isProgrammaticChangeRef = useRef(false);
   const historyIndexRef = useRef(-1);
   const draftBeforeHistoryRef = useRef("");
-  const [slashQuery, setSlashQuery] = useState("");
-  const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [commandQuery, setCommandQuery] = useState<string | null>(null);
+  const [wordToken, setWordToken] = useState<WordToken | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [isSelectionExplicit, setIsSelectionExplicit] = useState(false);
+  const listboxId = useId();
 
   const threadMessages = useAuiState((s) => s.thread.messages);
   const userInputHistory = useMemo(
@@ -194,17 +246,46 @@ const Composer: FC = () => {
   );
 
   const filteredAskTypes = useMemo(
-    () => ASK_TYPES.filter((type) => type.startsWith(slashQuery.toLowerCase())),
-    [slashQuery],
+    () =>
+      commandQuery === null
+        ? []
+        : ASK_TYPES.filter((type) =>
+            type.startsWith(commandQuery.toLowerCase()),
+          ),
+    [commandQuery],
   );
+  const wordMatches = useWordMatches(wordToken?.word ?? null);
 
-  const closeSlashMenu = () => {
-    setShowSlashMenu(false);
-    setSlashQuery("");
+  const menu: SuggestionMenu =
+    filteredAskTypes.length > 0
+      ? { kind: "command", items: filteredAskTypes }
+      : wordToken && wordMatches.length > 0
+        ? { kind: "word", items: wordMatches, token: wordToken }
+        : { kind: "none" };
+  const items = menu.kind === "none" ? NO_ITEMS : menu.items;
+  const typedPrefixLength = menu.kind === "word" ? menu.token.word.length : 0;
+  const activeIndex =
+    items.length > 0 ? Math.min(selectedIndex, items.length - 1) : 0;
+
+  useEffect(() => {
+    document
+      .getElementById(`${listboxId}-${activeIndex}`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [listboxId, activeIndex]);
+
+  const closeMenu = () => {
+    setCommandQuery(null);
+    setWordToken(null);
     setSelectedIndex(0);
+    setIsSelectionExplicit(false);
   };
 
-  const setComposerValue = (nextValue: string) => {
+  const highlight = (index: number) => {
+    setSelectedIndex(index);
+    setIsSelectionExplicit(true);
+  };
+
+  const setComposerValue = (nextValue: string, caret = nextValue.length) => {
     const input = inputRef.current;
     if (!input) return;
 
@@ -213,59 +294,130 @@ const Composer: FC = () => {
       "value",
     );
     descriptor?.set?.call(input, nextValue);
+    // React handles the event synchronously, so the flag only covers this one
+    // change: recalling history or accepting a suggestion should not be read
+    // back as the user typing a new word.
+    isProgrammaticChangeRef.current = true;
     input.dispatchEvent(new Event("input", { bubbles: true }));
+    isProgrammaticChangeRef.current = false;
     input.focus();
-    input.setSelectionRange(nextValue.length, nextValue.length);
+    input.setSelectionRange(caret, caret);
+    // React re-renders the controlled textarea in response to the event above;
+    // re-assert the caret once that has settled.
+    queueMicrotask(() => {
+      if (input.value === nextValue) input.setSelectionRange(caret, caret);
+    });
   };
 
-  const insertSlashCommand = (type: (typeof ASK_TYPES)[number]) => {
+  const insertSlashCommand = (type: AskType) => {
     setComposerValue(`/${type} `);
-    closeSlashMenu();
+    closeMenu();
+  };
+
+  const insertWord = (word: string, token: WordToken) => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    const { value } = input;
+    setComposerValue(
+      value.slice(0, token.start) + word + value.slice(token.end),
+      token.start + word.length,
+    );
+    closeMenu();
+  };
+
+  const acceptSuggestion = (index: number) => {
+    if (menu.kind === "command") {
+      insertSlashCommand(menu.items[index]!);
+      return;
+    }
+
+    if (menu.kind === "word") {
+      insertWord(menu.items[index]!, menu.token);
+    }
   };
 
   const onComposerInputChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     const value = event.target.value;
-    const slashMatch = value.match(/^\/(\w*)$/);
+    setSelectedIndex(0);
+    setIsSelectionExplicit(false);
 
-    if (!slashMatch) {
-      closeSlashMenu();
+    // Mid-IME text is not a word yet; wait for the composition to commit.
+    if ((event.nativeEvent as InputEvent).isComposing) {
+      closeMenu();
       return;
     }
 
-    const query = slashMatch[1] ?? "";
-    setSlashQuery(query);
-    setSelectedIndex(0);
-    setShowSlashMenu(true);
+    if (isProgrammaticChangeRef.current) {
+      closeMenu();
+      return;
+    }
+
+    const slashMatch = value.match(/^\/(\w*)$/);
+    if (slashMatch) {
+      setCommandQuery(slashMatch[1] ?? "");
+      setWordToken(null);
+      return;
+    }
+
+    setCommandQuery(null);
+    setWordToken(
+      getWordTokenAtCaret(value, event.target.selectionStart ?? value.length),
+    );
+  };
+
+  const onComposerInputSelect = (
+    event: SyntheticEvent<HTMLTextAreaElement>,
+  ) => {
+    if (!wordToken) return;
+
+    // The caret moved out of the word being completed, so the menu no longer
+    // describes what is being typed.
+    const caret = event.currentTarget.selectionStart ?? 0;
+    if (caret < wordToken.start || caret > wordToken.end) setWordToken(null);
   };
 
   const onComposerInputKeyDown = (
     event: KeyboardEvent<HTMLTextAreaElement>,
   ) => {
-    if (showSlashMenu && filteredAskTypes.length > 0) {
+    // Leave the IME candidate window alone.
+    if (event.nativeEvent.isComposing) return;
+
+    if (items.length > 0) {
       if (event.key === "ArrowDown") {
         event.preventDefault();
-        setSelectedIndex((index) => (index + 1) % filteredAskTypes.length);
+        highlight((activeIndex + 1) % items.length);
         return;
       }
 
       if (event.key === "ArrowUp") {
         event.preventDefault();
-        setSelectedIndex(
-          (index) =>
-            (index - 1 + filteredAskTypes.length) % filteredAskTypes.length,
-        );
+        highlight((activeIndex - 1 + items.length) % items.length);
         return;
       }
 
-      if (event.key === "Enter" || event.key === "Tab") {
+      if (event.key === "Tab") {
         event.preventDefault();
-        insertSlashCommand(filteredAskTypes[selectedIndex]!);
+        acceptSuggestion(activeIndex);
         return;
+      }
+
+      if (event.key === "Enter" && !event.shiftKey) {
+        // A half-typed slash command is never a message worth sending, so Enter
+        // completes it. A word usually is: Enter only completes one the user
+        // picked with the arrow keys, and otherwise sends as it always has.
+        if (menu.kind === "command" || isSelectionExplicit) {
+          event.preventDefault();
+          acceptSuggestion(activeIndex);
+          return;
+        }
+
+        closeMenu();
       }
 
       if (event.key === "Escape") {
         event.preventDefault();
-        closeSlashMenu();
+        closeMenu();
         return;
       }
     }
@@ -322,27 +474,56 @@ const Composer: FC = () => {
           rows={1}
           autoFocus
           aria-label="Message input"
+          aria-autocomplete="list"
+          aria-expanded={items.length > 0}
+          aria-controls={items.length > 0 ? listboxId : undefined}
+          aria-activedescendant={
+            items.length > 0 ? `${listboxId}-${activeIndex}` : undefined
+          }
           onChange={onComposerInputChange}
           onKeyDown={onComposerInputKeyDown}
+          onSelect={onComposerInputSelect}
+          onBlur={closeMenu}
         />
-        {showSlashMenu && filteredAskTypes.length > 0 ? (
-          <div className="bg-popover border-border shadow-lg rounded-xl border p-1">
-            {filteredAskTypes.map((type, index) => (
+        {items.length > 0 ? (
+          <div
+            id={listboxId}
+            role="listbox"
+            aria-label={
+              menu.kind === "command" ? "Commands" : "Word suggestions"
+            }
+            className="bg-popover border-border max-h-64 overflow-y-auto rounded-xl border p-1 shadow-lg"
+          >
+            {items.map((item, index) => (
               <button
-                key={type}
+                key={item}
+                id={`${listboxId}-${index}`}
                 type="button"
+                role="option"
+                aria-selected={index === activeIndex}
                 className={cn(
                   "w-full rounded-md px-3 py-2 text-left text-sm",
-                  index === selectedIndex
+                  index === activeIndex
                     ? "bg-accent text-accent-foreground"
                     : "hover:bg-accent/60",
                 )}
                 onMouseDown={(event) => {
                   event.preventDefault();
-                  insertSlashCommand(type);
+                  acceptSuggestion(index);
                 }}
               >
-                /{type}
+                {menu.kind === "command" ? (
+                  `/${item}`
+                ) : (
+                  <>
+                    <span className="font-medium">
+                      {item.slice(0, typedPrefixLength)}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {item.slice(typedPrefixLength)}
+                    </span>
+                  </>
+                )}
               </button>
             ))}
           </div>

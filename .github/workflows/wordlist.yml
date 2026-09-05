@@ -1,0 +1,102 @@
+name: Refresh word list
+
+on:
+  schedule:
+    # 04:17 UTC on the 1st of each month. Off the hour on purpose: GitHub
+    # queues scheduled runs, and the top of the hour is the busiest slot.
+    - cron: "17 4 1 * *"
+  workflow_dispatch:
+
+# Enough to push the branch and open the pull request, nothing more. The
+# refreshed list is reviewed and merged by a human, never committed straight
+# to a branch that deploys.
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: wordlist-refresh
+  cancel-in-progress: false
+
+env:
+  BRANCH: chore/refresh-wordlist
+  WORDLIST: apps/frontend/src/lib/wordlist/english-words.txt
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # Also sets pipefail, so a failing generator is not masked by `tee`.
+        shell: bash
+    steps:
+      # Third-party actions are pinned to full commit SHAs, not tags — tags
+      # are mutable and this repository is public.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      # No install step: the generator has no dependencies by design, so it
+      # runs straight from a bare Node. It fetches SCOWL/ESDB and the corpus
+      # frequencies, and exits non-zero if either upstream changes shape or
+      # returns an implausibly short list.
+      - name: Regenerate word list
+        run: |
+          node --experimental-strip-types \
+            apps/frontend/scripts/generate-wordlist.ts | tee /tmp/wordlist-report.txt
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet -- "$WORDLIST"; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Upstream has not changed the word list." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open pull request
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # A manual run proposes the change against whatever branch it was
+          # dispatched from; the monthly run therefore targets the default one.
+          BASE: ${{ github.ref_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git commit -qm "chore(frontend): refresh the English word list" -- "$WORDLIST"
+
+          # A fixed branch, force-pushed: consecutive months update one pull
+          # request instead of stacking up months of superseded ones.
+          git push -qf -u origin "$BRANCH"
+
+          {
+            echo "Regenerated from upstream by the monthly \`Refresh word list\` workflow."
+            echo
+            echo '```'
+            cat /tmp/wordlist-report.txt
+            echo '```'
+            echo
+            echo "Lines changed: $(git diff --numstat HEAD~1 HEAD -- "$WORDLIST" | awk '{print "+" $1 " / -" $2}')"
+            echo
+            echo "CI does not run on pull requests authored by \`GITHUB_TOKEN\`."
+            echo "Close and reopen this one to trigger it."
+          } > /tmp/pr-body.md
+
+          cat /tmp/pr-body.md >> "$GITHUB_STEP_SUMMARY"
+
+          if [ -z "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            gh pr create \
+              --base "$BASE" \
+              --head "$BRANCH" \
+              --title "chore(frontend): refresh the English word list" \
+              --body-file /tmp/pr-body.md
+          else
+            # The force-push already updated the open pull request's diff; only
+            # its description needs to catch up.
+            gh pr edit "$BRANCH" --body-file /tmp/pr-body.md
+          fi
