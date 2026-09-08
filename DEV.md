@@ -35,6 +35,16 @@ pnpm dev:fe
 
 Alternatively `docker compose up` runs the whole stack with hot reload.
 
+The containers keep their `node_modules` in named volumes, so a dependency
+change on the host is not picked up until those are rebuilt:
+
+```bash
+pnpm docker:prune-node-modules
+```
+
+It stops the stack and removes only the `*_node_modules` volumes — the database
+volume is left alone. The next `docker compose up` reinstalls from scratch.
+
 ## Deployment
 
 Deployed to a personal mini PC and reachable only from a private

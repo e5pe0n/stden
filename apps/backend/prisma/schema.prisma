@@ -19,3 +19,48 @@ model meanings {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 }
+
+/// One row per ask — a single meaning, diff or free request. The sidebar
+/// replays these, so it stores what the user asked and what came back, not the
+/// engineered prompt that `meanings` keeps for cache bookkeeping.
+model histories {
+  id         Int      @id @default(autoincrement())
+  type       ask_type
+  question   String
+  answer     String
+  created_at DateTime @default(now())
+
+  @@index([created_at])
+}
+
+enum ask_type {
+  meaning
+  diff
+  free
+}
+
+/// One completed test. A test set only reaches the database once it has been
+/// answered and graded, so an abandoned run leaves nothing behind and every
+/// row here carries a full set of verdicts. How many of them are right is
+/// counted from `test_questions`, never stored beside it.
+model tests {
+  id         Int              @id @default(autoincrement())
+  created_at DateTime         @default(now())
+  questions  test_questions[]
+
+  @@index([created_at])
+}
+
+/// One word of a test set with what the learner wrote and how it was graded.
+model test_questions {
+  id       Int     @id @default(autoincrement())
+  test_id  Int
+  position Int
+  word     String
+  answer   String
+  correct  Boolean
+  comment  String
+  test     tests   @relation(fields: [test_id], references: [id], onDelete: Cascade)
+
+  @@unique([test_id, position])
+}
