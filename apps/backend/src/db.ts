@@ -88,14 +88,18 @@ export function insertTest(data: Prisma.testsCreateInput) {
   });
 }
 
-/** Only the words come back: the sidebar labels a test with them, and the
- *  answers and comments are bodies no list needs. */
+/** Only the words and their verdicts come back: the sidebar labels a test with
+ *  them and counts the right ones, and the answers and comments are bodies no
+ *  list needs. */
 export function listTests({ take }: { take: number }) {
   return prisma.tests.findMany({
     orderBy: { created_at: "desc" },
     take,
     include: {
-      questions: { orderBy: { position: "asc" }, select: { word: true } },
+      questions: {
+        orderBy: { position: "asc" },
+        select: { word: true, correct: true },
+      },
     },
   });
 }

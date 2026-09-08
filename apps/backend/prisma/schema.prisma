@@ -41,10 +41,10 @@ enum ask_type {
 
 /// One completed test. A test set only reaches the database once it has been
 /// answered and graded, so an abandoned run leaves nothing behind and every
-/// row here has a score.
+/// row here carries a full set of verdicts. How many of them are right is
+/// counted from `test_questions`, never stored beside it.
 model tests {
   id         Int              @id @default(autoincrement())
-  score      Int
   created_at DateTime         @default(now())
   questions  test_questions[]
 

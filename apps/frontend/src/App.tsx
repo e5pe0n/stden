@@ -204,7 +204,7 @@ const toHistoryItem = (history: HistorySummary): SidebarItem => ({
 const toTestItem = (test: TestSummary): SidebarItem => ({
   id: test.id,
   title: test.words.join(", "),
-  badge: `${test.score}/100`,
+  badge: `${test.correctCount}/${test.words.length}`,
   createdAt: test.createdAt,
 });
 

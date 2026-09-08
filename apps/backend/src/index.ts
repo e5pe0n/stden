@@ -27,7 +27,6 @@ import {
 import { handleAskByType } from "./meaning.js";
 import {
   gradeAnswers,
-  scoreOf,
   TEST_LIST_LIMIT,
   toTestEntry,
   toTestSummary,
@@ -194,7 +193,6 @@ fastify.post("/api/v1/tests", async (request, reply) => {
   }
 
   const row = await insertTest({
-    score: scoreOf(graded.value),
     questions: { create: graded.value },
   });
 

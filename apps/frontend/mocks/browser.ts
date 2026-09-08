@@ -36,7 +36,7 @@ const toSummary = ({ answer: _answer, ...summary }: MockHistory) => summary;
 
 type MockTest = {
   id: number;
-  score: number;
+  correctCount: number;
   words: string[];
   createdAt: string;
   questions: {
@@ -142,7 +142,7 @@ const handlers: HttpHandler[] = [
 
     const test: MockTest = {
       id: nextTestId++,
-      score: questions.filter((question) => question.correct).length * 10,
+      correctCount: questions.filter((question) => question.correct).length,
       words: questions.map((question) => question.word),
       createdAt: new Date().toISOString(),
       questions,

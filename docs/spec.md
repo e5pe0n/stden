@@ -40,15 +40,14 @@
 - Each word is shown on its own; the user writes one example sentence using it.
 - Gemini judges whether the word is used correctly and writes a comment. The
   verdict and the comment stay hidden until the test is finished.
-- `10` points per correct word — `100` at most.
-- The result lists every word with the user's answer, the verdict, the comment,
-  and the total score.
+- The result lists every word with the user's answer, the verdict and the
+  comment, headed by how many of the words were used correctly out of how many
+  were asked.
 - A test reaches the database only once it has been answered and graded, so an
   abandoned run leaves nothing behind.
 
 ```ts
 {
-  score: number;
   createdAt: Date;  // UTC
   questions: {
     position: number;

@@ -153,8 +153,8 @@ const StartScreen: FC<{ isStarting: boolean; onStart: () => void }> = ({
       <h1 className="text-xl font-medium">Test yourself</h1>
       <p className="text-muted-foreground max-w-sm text-sm">
         {TEST_WORD_COUNT} words drawn at random from the ones you have looked
-        up. Write a sentence that uses each one. Ten points each — you will see
-        how you did at the end.
+        up. Write a sentence that uses each one — you will see how you did at
+        the end.
       </p>
     </div>
     <Button size="lg" disabled={isStarting} onClick={onStart}>
@@ -285,13 +285,13 @@ const ResultScreen: FC<{ test: TestEntry; onRestart: () => void }> = ({
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-muted-foreground text-sm">Score</p>
+          <p className="text-muted-foreground text-sm">Used correctly</p>
           <p className="text-4xl font-medium">
-            {test.score}
-            <span className="text-muted-foreground text-xl"> / 100</span>
-          </p>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {correct} of {test.questions.length} used correctly
+            {correct}
+            <span className="text-muted-foreground text-xl">
+              {" "}
+              / {test.questions.length}
+            </span>
           </p>
         </div>
         <Button variant="outline" onClick={onRestart}>
@@ -310,11 +310,7 @@ const ResultScreen: FC<{ test: TestEntry; onRestart: () => void }> = ({
 };
 
 const ResultCard: FC<{ question: TestQuestion }> = ({ question }) => (
-  // `relative` is load-bearing: the verdict below is `sr-only`, which is
-  // absolutely positioned, and without a positioned ancestor it resolves
-  // against the initial containing block — growing the *document* to the
-  // height of the whole list instead of staying inside the scroller.
-  <li className="border-border relative rounded-lg border p-4">
+  <li className="border-border rounded-lg border p-4">
     <div className="flex items-center gap-2">
       <span
         aria-hidden
@@ -332,10 +328,12 @@ const ResultCard: FC<{ question: TestQuestion }> = ({ question }) => (
         )}
       </span>
       <h2 className="font-medium">{question.word}</h2>
-      <span className="text-muted-foreground ms-auto text-xs">
-        {question.correct ? "+10" : "0"} pts
-      </span>
-      <span className="sr-only">
+      <span
+        className={cn(
+          "ms-auto text-xs",
+          question.correct ? "text-muted-foreground" : "text-destructive",
+        )}
+      >
         {question.correct ? "Correct" : "Incorrect"}
       </span>
     </div>

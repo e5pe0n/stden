@@ -1,12 +1,6 @@
 import { z } from "zod";
 import type { test_questions, tests } from "../generated/prisma/index.js";
-import {
-  POINTS_PER_WORD,
-  type Result,
-  type TestEntry,
-  type TestQuestion,
-  type TestSummary,
-} from "./types.js";
+import type { Result, TestEntry, TestQuestion, TestSummary } from "./types.js";
 
 /**
  * How many past tests the sidebar lists. Matches the history limit: the two
@@ -101,16 +95,12 @@ export async function gradeAnswers({
   return { success: true, value: graded };
 }
 
-export function scoreOf(grades: readonly { correct: boolean }[]): number {
-  return grades.filter((grade) => grade.correct).length * POINTS_PER_WORD;
-}
-
 export function toTestSummary(
-  row: tests & { questions: { word: string }[] },
+  row: tests & { questions: { word: string; correct: boolean }[] },
 ): TestSummary {
   return {
     id: row.id,
-    score: row.score,
+    correctCount: row.questions.filter((question) => question.correct).length,
     words: row.questions.map((question) => question.word),
     createdAt: row.created_at.toISOString(),
   };

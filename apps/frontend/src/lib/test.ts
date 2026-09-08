@@ -1,12 +1,13 @@
 import { z } from "zod";
 import { config } from "@/config";
 
-/** How many words one test holds. Ten words at ten points each makes 100. */
+/** How many words one test holds. */
 export const TEST_WORD_COUNT = 10;
 
 const testSummarySchema = z.object({
   id: z.number().int(),
-  score: z.number().int(),
+  /** How many words were used correctly. `words.length` is the total. */
+  correctCount: z.number().int(),
   words: z.array(z.string()),
   createdAt: z.string(),
 });
