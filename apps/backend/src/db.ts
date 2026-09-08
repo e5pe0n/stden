@@ -31,3 +31,32 @@ export function findMeaning(where: Prisma.meaningsWhereUniqueInput) {
     where,
   });
 }
+
+export function insertHistory(data: Prisma.historiesCreateInput) {
+  return prisma.histories.create({
+    data,
+  });
+}
+
+export function listHistories({ take }: { take: number }) {
+  return prisma.histories.findMany({
+    orderBy: { created_at: "desc" },
+    take,
+  });
+}
+
+export function findHistory(where: Prisma.historiesWhereUniqueInput) {
+  return prisma.histories.findUnique({
+    where,
+  });
+}
+
+/**
+ * `deleteMany` rather than `delete` so a missing row reports `count: 0`
+ * instead of throwing, letting the route answer 404 without a try/catch.
+ */
+export function deleteHistory(where: Prisma.historiesWhereInput) {
+  return prisma.histories.deleteMany({
+    where,
+  });
+}
