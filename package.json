@@ -4,6 +4,7 @@
   "scripts": {
     "dev:be": "pnpm --filter backend dev",
     "dev:fe": "pnpm --filter frontend dev",
+    "docker:prune-node-modules": "./scripts/prune-node-modules-volumes.sh",
     "lint": "biome check",
     "lint:fix": "biome check --fix",
     "type": "pnpm -r type",
