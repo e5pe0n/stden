@@ -310,7 +310,11 @@ const ResultScreen: FC<{ test: TestEntry; onRestart: () => void }> = ({
 };
 
 const ResultCard: FC<{ question: TestQuestion }> = ({ question }) => (
-  <li className="border-border rounded-lg border p-4">
+  // `relative` is load-bearing: the verdict below is `sr-only`, which is
+  // absolutely positioned, and without a positioned ancestor it resolves
+  // against the initial containing block — growing the *document* to the
+  // height of the whole list instead of staying inside the scroller.
+  <li className="border-border relative rounded-lg border p-4">
     <div className="flex items-center gap-2">
       <span
         aria-hidden

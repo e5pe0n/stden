@@ -113,7 +113,7 @@ export const AppSidebar: FC<AppSidebarProps> = ({
 
         {/* Which feature the app is in — and, because the list below follows
             it, which history the sidebar is listing. */}
-        <fieldset className="bg-foreground/5 mx-2 mb-2 grid grid-cols-2 gap-1 rounded-lg p-1">
+        <fieldset className="bg-foreground/5 relative mx-2 mb-2 grid grid-cols-2 gap-1 rounded-lg p-1">
           <legend className="sr-only">Feature</legend>
           {FEATURE_BUTTONS.map(({ feature: candidate, label, icon }) => (
             <Button

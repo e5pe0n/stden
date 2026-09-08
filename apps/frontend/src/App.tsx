@@ -368,7 +368,10 @@ function App() {
 
   return (
     <TooltipProvider>
-      <div className="bg-background flex h-dvh">
+      {/* `overflow-hidden` keeps this a fixed frame: both panes scroll on
+          their own, and a stray absolutely-positioned child must never give
+          the document a second scrollbar of its own. */}
+      <div className="bg-background flex h-dvh overflow-hidden">
         <AppSidebar
           feature={feature}
           onFeatureChange={setFeature}
