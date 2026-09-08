@@ -317,7 +317,7 @@ const ResultCard: FC<{ question: TestQuestion }> = ({ question }) => (
         className={cn(
           "flex size-5 shrink-0 items-center justify-center rounded-full",
           question.correct
-            ? "bg-foreground/10 text-foreground"
+            ? "bg-success/15 text-success"
             : "bg-destructive/15 text-destructive",
         )}
       >
@@ -331,7 +331,7 @@ const ResultCard: FC<{ question: TestQuestion }> = ({ question }) => (
       <span
         className={cn(
           "ms-auto text-xs",
-          question.correct ? "text-muted-foreground" : "text-destructive",
+          question.correct ? "text-success" : "text-destructive",
         )}
       >
         {question.correct ? "Correct" : "Incorrect"}
