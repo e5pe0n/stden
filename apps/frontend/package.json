@@ -8,7 +8,8 @@
     "dev": "vite",
     "type": "tsc --noEmit",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "wordlist:generate": "node --experimental-strip-types scripts/generate-wordlist.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.66",
@@ -39,6 +40,7 @@
   },
   "devDependencies": {
     "@tailwindcss/typography": "0.5.19",
+    "@types/node": "catalog:",
     "@types/react": "19.2.15",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
