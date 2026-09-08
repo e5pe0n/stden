@@ -5,8 +5,21 @@ import fastifyStatic from "@fastify/static";
 import Fastify from "fastify";
 import { z } from "zod";
 import { config } from "./config.js";
+import {
+  deleteHistory,
+  findHistory,
+  insertHistory,
+  listHistories,
+} from "./db.js";
 import { ask } from "./genai.js";
+import {
+  HISTORY_LIST_LIMIT,
+  toHistoryEntry,
+  toHistorySummary,
+  toQuestionText,
+} from "./history.js";
 import { handleAskByType } from "./meaning.js";
+import type { HistorySummary } from "./types.js";
 
 const askSchema = z.discriminatedUnion("type", [
   z.object({
@@ -24,6 +37,10 @@ const askSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
+const historyParamsSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
 // Initialize Fastify server
 const fastify = Fastify({
   logger: true,
@@ -34,6 +51,9 @@ const fastify = Fastify({
 // cross-origin requests and CORS stays off.
 await fastify.register(cors, {
   origin: config.corsOrigins.length > 0 ? config.corsOrigins : false,
+  // The default omits DELETE, which the history routes need. Only dev sees
+  // this: production serves the SPA from this origin and disables CORS.
+  methods: ["GET", "POST", "DELETE"],
 });
 
 // Liveness probe. Deploys poll this to confirm a rollout succeeded.
@@ -57,9 +77,61 @@ fastify.post("/api/v1", async (request, reply) => {
     return reply.code(500).send({ error: "Internal server error" });
   }
 
+  // History is a record of the ask, not part of answering it: a failed write
+  // costs the sidebar one row and must not turn a good answer into a 500.
+  let history: HistorySummary | undefined;
+  try {
+    history = toHistorySummary(
+      await insertHistory({
+        type: parsed.data.type,
+        question: toQuestionText(parsed.data),
+        answer: res.value,
+      }),
+    );
+  } catch (error) {
+    request.log.error(error, "failed to record history");
+  }
+
   return reply.send({
     text: res.value,
+    history,
   });
+});
+
+// Most recent asks, newest first. Answers are omitted — the sidebar only needs
+// labels, and the bodies are markdown documents.
+fastify.get("/api/v1/histories", async (_request, reply) => {
+  const rows = await listHistories({ take: HISTORY_LIST_LIMIT });
+  return reply.send({ histories: rows.map(toHistorySummary) });
+});
+
+// One entry with its answer, loaded when the sidebar opens it.
+fastify.get("/api/v1/histories/:id", async (request, reply) => {
+  const parsed = historyParamsSchema.safeParse(request.params);
+  if (!parsed.success) {
+    return reply.code(400).send({ error: "Invalid history id" });
+  }
+
+  const row = await findHistory({ id: parsed.data.id });
+  if (!row) {
+    return reply.code(404).send({ error: "Not found" });
+  }
+
+  return reply.send({ history: toHistoryEntry(row) });
+});
+
+fastify.delete("/api/v1/histories/:id", async (request, reply) => {
+  const parsed = historyParamsSchema.safeParse(request.params);
+  if (!parsed.success) {
+    return reply.code(400).send({ error: "Invalid history id" });
+  }
+
+  const { count } = await deleteHistory({ id: parsed.data.id });
+  if (count === 0) {
+    return reply.code(404).send({ error: "Not found" });
+  }
+
+  return reply.code(204).send();
 });
 
 // Serve the built SPA from the same origin as the API. Only in production —

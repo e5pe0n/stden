@@ -57,6 +57,7 @@ import {
 } from "@/components/assistant-ui/tool-group";
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
 import { Button } from "@/components/ui/button";
+import { ASK_TYPES, type AskType } from "@/lib/ask";
 import { cn } from "@/lib/utils";
 import {
   getLoadedWordList,
@@ -65,8 +66,6 @@ import {
   searchWords,
   type WordToken,
 } from "@/lib/word-suggestions";
-
-const ASK_TYPES = ["meaning", "diff", "free"] as const;
 
 export const Thread: FC = () => {
   return (
@@ -178,8 +177,6 @@ const ThreadSuggestionItem: FC = () => {
     </div>
   );
 };
-
-type AskType = (typeof ASK_TYPES)[number];
 
 type SuggestionMenu =
   | { kind: "none" }

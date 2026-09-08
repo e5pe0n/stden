@@ -19,3 +19,22 @@ model meanings {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 }
+
+/// One row per ask — a single meaning, diff or free request. The sidebar
+/// replays these, so it stores what the user asked and what came back, not the
+/// engineered prompt that `meanings` keeps for cache bookkeeping.
+model histories {
+  id         Int      @id @default(autoincrement())
+  type       ask_type
+  question   String
+  answer     String
+  created_at DateTime @default(now())
+
+  @@index([created_at])
+}
+
+enum ask_type {
+  meaning
+  diff
+  free
+}
