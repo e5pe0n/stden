@@ -1,25 +1,52 @@
-import { Loader2Icon, PlusIcon, SidebarIcon, TrashIcon } from "lucide-react";
-import type { FC } from "react";
+import {
+  GraduationCapIcon,
+  Loader2Icon,
+  PlusIcon,
+  SidebarIcon,
+  SquareCheckBigIcon,
+  TrashIcon,
+} from "lucide-react";
+import type { FC, ReactNode } from "react";
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
 import { Button } from "@/components/ui/button";
-import type { AskType } from "@/lib/ask";
-import { formatHistoryTime, type HistorySummary } from "@/lib/history";
+import type { Feature } from "@/lib/feature";
+import { formatHistoryTime } from "@/lib/history";
 import { cn } from "@/lib/utils";
 
-/** A word lookup is the default mode, so only the slash modes earn a label. */
-const ASK_TYPE_LABELS: Record<AskType, string | null> = {
-  meaning: null,
-  diff: "diff",
-  free: "free",
+/**
+ * One row of whichever list the sidebar is showing. Both features reduce to
+ * this shape, so the list below the feature section stays one component
+ * instead of two that drift apart.
+ */
+export type SidebarItem = {
+  id: number;
+  title: string;
+  /** A short tag beside the timestamp — an ask mode, or a test score. */
+  badge: string | null;
+  createdAt: string;
 };
 
-type HistorySidebarProps = {
-  histories: readonly HistorySummary[];
+const FEATURE_BUTTONS: {
+  feature: Feature;
+  label: string;
+  icon: ReactNode;
+}[] = [
+  { feature: "learn", label: "Learn", icon: <GraduationCapIcon /> },
+  { feature: "test", label: "Test", icon: <SquareCheckBigIcon /> },
+];
+
+type AppSidebarProps = {
+  feature: Feature;
+  onFeatureChange: (feature: Feature) => void;
+  items: readonly SidebarItem[];
   activeId: number | null;
-  /** The row whose answer is being fetched, if any. */
+  /** The row whose body is being fetched, if any. */
   pendingId: number | null;
   isLoading: boolean;
   error: string | null;
+  /** Shown in place of the list when there is nothing to list yet. */
+  emptyMessage: string;
+  newLabel: string;
   isOpen: boolean;
   onToggle: () => void;
   onSelect: (id: number) => void;
@@ -27,12 +54,16 @@ type HistorySidebarProps = {
   onNew: () => void;
 };
 
-export const HistorySidebar: FC<HistorySidebarProps> = ({
-  histories,
+export const AppSidebar: FC<AppSidebarProps> = ({
+  feature,
+  onFeatureChange,
+  items,
   activeId,
   pendingId,
   isLoading,
   error,
+  emptyMessage,
+  newLabel,
   isOpen,
   onToggle,
   onSelect,
@@ -41,13 +72,13 @@ export const HistorySidebar: FC<HistorySidebarProps> = ({
 }) => {
   return (
     <>
-      {/* Below `md` the sidebar floats over the thread, so it needs a backdrop
-          to dismiss. Above it, the sidebar sits in the flex row and this is
-          inert. */}
+      {/* Below `md` the sidebar floats over the main pane, so it needs a
+          backdrop to dismiss. Above it, the sidebar sits in the flex row and
+          this is inert. */}
       {isOpen ? (
         <button
           type="button"
-          aria-label="Close history"
+          aria-label="Close sidebar"
           tabIndex={-1}
           className="fixed inset-0 z-20 bg-black/40 md:hidden"
           onClick={onToggle}
@@ -55,8 +86,8 @@ export const HistorySidebar: FC<HistorySidebarProps> = ({
       ) : null}
 
       <aside
-        data-slot="history-sidebar"
-        aria-label="History"
+        data-slot="app-sidebar"
+        aria-label="Sidebar"
         aria-hidden={!isOpen}
         inert={!isOpen}
         className={cn(
@@ -66,7 +97,7 @@ export const HistorySidebar: FC<HistorySidebarProps> = ({
         )}
       >
         <div className="flex items-center justify-between gap-1 p-2">
-          <TooltipIconButton tooltip="Hide history" onClick={onToggle}>
+          <TooltipIconButton tooltip="Hide sidebar" onClick={onToggle}>
             <SidebarIcon />
           </TooltipIconButton>
           <Button
@@ -76,13 +107,40 @@ export const HistorySidebar: FC<HistorySidebarProps> = ({
             onClick={onNew}
           >
             <PlusIcon className="size-4" />
-            New
+            {newLabel}
           </Button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-2 pb-2">
+        {/* Which feature the app is in — and, because the list below follows
+            it, which history the sidebar is listing. */}
+        <fieldset className="bg-foreground/5 mx-2 mb-2 grid grid-cols-2 gap-1 rounded-lg p-1">
+          <legend className="sr-only">Feature</legend>
+          {FEATURE_BUTTONS.map(({ feature: candidate, label, icon }) => (
+            <Button
+              key={candidate}
+              variant="ghost"
+              size="sm"
+              aria-pressed={candidate === feature}
+              className={cn(
+                "gap-1.5",
+                candidate === feature
+                  ? "bg-background text-foreground shadow-xs hover:bg-background"
+                  : "text-muted-foreground",
+              )}
+              onClick={() => onFeatureChange(candidate)}
+            >
+              {icon}
+              {label}
+            </Button>
+          ))}
+        </fieldset>
+
+        <nav
+          aria-label={feature === "learn" ? "Ask history" : "Test history"}
+          className="flex-1 overflow-y-auto px-2 pb-2"
+        >
           {/* A banner above the list, never in place of it: a failed delete
-              rolls its row back, and blanking the history would hide it. */}
+              rolls its row back, and blanking the list would hide it. */}
           {error ? (
             <p role="alert" className="text-destructive px-2 py-1.5 text-sm">
               {error}
@@ -93,20 +151,20 @@ export const HistorySidebar: FC<HistorySidebarProps> = ({
             <p className="text-muted-foreground px-2 py-1.5 text-sm">
               Loading…
             </p>
-          ) : histories.length === 0 ? (
+          ) : items.length === 0 ? (
             error ? null : (
               <p className="text-muted-foreground px-2 py-1.5 text-sm">
-                Your lookups will show up here.
+                {emptyMessage}
               </p>
             )
           ) : (
             <ul className="flex flex-col gap-0.5">
-              {histories.map((history) => (
-                <HistoryRow
-                  key={history.id}
-                  history={history}
-                  isActive={history.id === activeId}
-                  isPending={history.id === pendingId}
+              {items.map((item) => (
+                <SidebarRow
+                  key={item.id}
+                  item={item}
+                  isActive={item.id === activeId}
+                  isPending={item.id === pendingId}
                   onSelect={onSelect}
                   onDelete={onDelete}
                 />
@@ -119,23 +177,21 @@ export const HistorySidebar: FC<HistorySidebarProps> = ({
   );
 };
 
-type HistoryRowProps = {
-  history: HistorySummary;
+type SidebarRowProps = {
+  item: SidebarItem;
   isActive: boolean;
   isPending: boolean;
   onSelect: (id: number) => void;
   onDelete: (id: number) => void;
 };
 
-const HistoryRow: FC<HistoryRowProps> = ({
-  history,
+const SidebarRow: FC<SidebarRowProps> = ({
+  item,
   isActive,
   isPending,
   onSelect,
   onDelete,
 }) => {
-  const label = ASK_TYPE_LABELS[history.type];
-
   return (
     <li className="group/row relative">
       <button
@@ -149,16 +205,16 @@ const HistoryRow: FC<HistoryRowProps> = ({
           "w-full cursor-pointer rounded-md px-2 py-1.5 pe-8 text-start transition-colors",
           isActive ? "bg-foreground/10 font-medium" : "hover:bg-foreground/5",
         )}
-        onClick={() => onSelect(history.id)}
+        onClick={() => onSelect(item.id)}
       >
-        <span className="block truncate text-sm">{history.question}</span>
+        <span className="block truncate text-sm">{item.title}</span>
         <span className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
-          {label ? (
+          {item.badge ? (
             <span className="border-border rounded border px-1 leading-4">
-              {label}
+              {item.badge}
             </span>
           ) : null}
-          <span>{formatHistoryTime(history.createdAt)}</span>
+          <span>{formatHistoryTime(item.createdAt)}</span>
         </span>
       </button>
 
@@ -169,7 +225,7 @@ const HistoryRow: FC<HistoryRowProps> = ({
           <TooltipIconButton
             tooltip="Delete"
             className="opacity-50 transition-opacity hover:opacity-100 focus-visible:opacity-100 group-hover/row:opacity-100"
-            onClick={() => onDelete(history.id)}
+            onClick={() => onDelete(item.id)}
           >
             <TrashIcon />
           </TooltipIconButton>
@@ -181,15 +237,15 @@ const HistoryRow: FC<HistoryRowProps> = ({
 
 /**
  * Reopens the sidebar once it is hidden and the toggle inside it is gone. It
- * is a row above the thread rather than an overlay so it never covers a
- * message.
+ * is a row above the main pane rather than an overlay so it never covers
+ * content.
  */
-export const HistorySidebarTrigger: FC<{ onToggle: () => void }> = ({
+export const AppSidebarTrigger: FC<{ onToggle: () => void }> = ({
   onToggle,
 }) => {
   return (
     <div className="flex shrink-0 items-center p-2">
-      <TooltipIconButton tooltip="Show history" onClick={onToggle}>
+      <TooltipIconButton tooltip="Show sidebar" onClick={onToggle}>
         <SidebarIcon />
       </TooltipIconButton>
     </div>

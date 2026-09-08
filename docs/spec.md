@@ -26,3 +26,36 @@
   updatedAt: Date;  // UTC
 }
 ```
+
+## Naming
+
+- **Learn** and **Test** are the two features, and the two buttons at the top
+  of the sidebar.
+- An **ask** is one interaction inside Learn — a meaning, a `/diff` or a
+  `/free` question. It is the unit the history records, not a feature name.
+
+## Test
+
+- A test set is `10` words drawn at random from the words already asked about.
+- Each word is shown on its own; the user writes one example sentence using it.
+- Gemini judges whether the word is used correctly and writes a comment. The
+  verdict and the comment stay hidden until the test is finished.
+- `10` points per correct word — `100` at most.
+- The result lists every word with the user's answer, the verdict, the comment,
+  and the total score.
+- A test reaches the database only once it has been answered and graded, so an
+  abandoned run leaves nothing behind.
+
+```ts
+{
+  score: number;
+  createdAt: Date;  // UTC
+  questions: {
+    position: number;
+    word: string;
+    answer: string;
+    correct: boolean;
+    comment: string;
+  }[];
+}
+```

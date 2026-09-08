@@ -8,6 +8,15 @@ Every ask — a word, a `/diff` between words, or a `/free` question — is save
 its own history entry. The sidebar lists them newest first and reopens any one
 of them.
 
+Two features share that sidebar, switched from the buttons at its top:
+
+- **Learn** — the asks above, with their history.
+- **Test** — ten words drawn at random from the ones you have looked up. Write
+  a sentence for each; Gemini marks the use right or wrong and comments on it,
+  and you see the verdicts, the advice and the score only once you finish.
+
+Built with:
+
 - **Backend** — Fastify + Prisma (Postgres), Google Gemini for generation
 - **Frontend** — React 19 + Vite + Tailwind, assistant-ui chat interface
 - **Monorepo** — pnpm workspaces (`apps/backend`, `apps/frontend`)

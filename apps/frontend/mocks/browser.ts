@@ -34,6 +34,39 @@ const histories: MockHistory[] = [
 
 const toSummary = ({ answer: _answer, ...summary }: MockHistory) => summary;
 
+type MockTest = {
+  id: number;
+  score: number;
+  words: string[];
+  createdAt: string;
+  questions: {
+    position: number;
+    word: string;
+    answer: string;
+    correct: boolean;
+    comment: string;
+  }[];
+};
+
+const TEST_WORDS = [
+  "disseminate",
+  "ubiquitous",
+  "meticulous",
+  "resilient",
+  "candid",
+  "arbitrary",
+  "profound",
+  "tangible",
+  "succinct",
+  "pragmatic",
+];
+
+let nextTestId = 1;
+const tests: MockTest[] = [];
+
+const toTestSummary = ({ questions: _questions, ...summary }: MockTest) =>
+  summary;
+
 const handlers: HttpHandler[] = [
   http.get(`${API}/histories`, () => {
     return HttpResponse.json({ histories: histories.map(toSummary) });
@@ -58,6 +91,65 @@ const handlers: HttpHandler[] = [
     }
     histories.splice(index, 1);
     return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.get(`${API}/tests/new`, () => {
+    return HttpResponse.json({ words: TEST_WORDS });
+  }),
+
+  http.get(`${API}/tests`, () => {
+    return HttpResponse.json({ tests: tests.map(toTestSummary) });
+  }),
+
+  http.get(`${API}/tests/:id`, ({ params }) => {
+    const test = tests.find((candidate) => candidate.id === Number(params.id));
+    if (!test) {
+      return HttpResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    return HttpResponse.json({ test });
+  }),
+
+  http.delete(`${API}/tests/:id`, ({ params }) => {
+    const index = tests.findIndex(
+      (candidate) => candidate.id === Number(params.id),
+    );
+    if (index === -1) {
+      return HttpResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    tests.splice(index, 1);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  // Grades every other answer correct, which is enough to exercise both
+  // result states without a model behind it.
+  http.post(`${API}/tests`, async ({ request }) => {
+    const { answers } = (await request.json()) as {
+      answers: { word: string; answer: string }[];
+    };
+
+    const questions = answers.map((item, index) => {
+      const correct = Boolean(item.answer.trim()) && index % 2 === 0;
+      return {
+        position: index + 1,
+        word: item.word,
+        answer: item.answer,
+        correct,
+        comment: correct
+          ? `Nice — "${item.word}" is used with the right meaning here.`
+          : `"${item.word}" does not quite fit. Try: The report will ${item.word} the findings.`,
+      };
+    });
+
+    const test: MockTest = {
+      id: nextTestId++,
+      score: questions.filter((question) => question.correct).length * 10,
+      words: questions.map((question) => question.word),
+      createdAt: new Date().toISOString(),
+      questions,
+    };
+    tests.unshift(test);
+
+    return HttpResponse.json({ test });
   }),
 
   http.post(API, async ({ request }) => {
