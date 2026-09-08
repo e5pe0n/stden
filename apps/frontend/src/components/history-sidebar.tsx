@@ -70,9 +70,9 @@ export const HistorySidebar: FC<HistorySidebarProps> = ({
             <SidebarIcon />
           </TooltipIconButton>
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="gap-1.5 text-sm font-normal"
+            className="gap-1.5"
             onClick={onNew}
           >
             <PlusIcon className="size-4" />
@@ -141,11 +141,13 @@ const HistoryRow: FC<HistoryRowProps> = ({
       <button
         type="button"
         aria-current={isActive ? "true" : undefined}
+        // Tinting with the foreground rather than `--sidebar-accent`: in the
+        // light theme that token sits at oklch(0.97) against a sidebar of
+        // oklch(0.985), a difference too small to register as feedback. An
+        // alpha over the foreground stays legible in both themes.
         className={cn(
-          "w-full rounded-md px-2 py-1.5 pe-8 text-start",
-          isActive
-            ? "bg-sidebar-accent text-sidebar-accent-foreground"
-            : "hover:bg-sidebar-accent/60",
+          "w-full cursor-pointer rounded-md px-2 py-1.5 pe-8 text-start transition-colors",
+          isActive ? "bg-foreground/10 font-medium" : "hover:bg-foreground/5",
         )}
         onClick={() => onSelect(history.id)}
       >
@@ -166,7 +168,7 @@ const HistoryRow: FC<HistoryRowProps> = ({
         ) : (
           <TooltipIconButton
             tooltip="Delete"
-            className="opacity-0 focus-visible:opacity-100 group-hover/row:opacity-100"
+            className="opacity-50 transition-opacity hover:opacity-100 focus-visible:opacity-100 group-hover/row:opacity-100"
             onClick={() => onDelete(history.id)}
           >
             <TrashIcon />
