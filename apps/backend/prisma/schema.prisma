@@ -38,3 +38,29 @@ enum ask_type {
   diff
   free
 }
+
+/// One completed test. A test set only reaches the database once it has been
+/// answered and graded, so an abandoned run leaves nothing behind and every
+/// row here carries a full set of verdicts. How many of them are right is
+/// counted from `test_questions`, never stored beside it.
+model tests {
+  id         Int              @id @default(autoincrement())
+  created_at DateTime         @default(now())
+  questions  test_questions[]
+
+  @@index([created_at])
+}
+
+/// One word of a test set with what the learner wrote and how it was graded.
+model test_questions {
+  id       Int     @id @default(autoincrement())
+  test_id  Int
+  position Int
+  word     String
+  answer   String
+  correct  Boolean
+  comment  String
+  test     tests   @relation(fields: [test_id], references: [id], onDelete: Cascade)
+
+  @@unique([test_id, position])
+}
