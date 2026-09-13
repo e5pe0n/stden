@@ -11,7 +11,9 @@ of them.
 Two features share that sidebar, switched from the buttons at its top:
 
 - **Learn** — the asks above, with their history.
-- **Test** — ten words drawn at random from the ones you have looked up. Write
+- **Test** — ten words from the ones you have looked up, mostly those you are
+  likeliest to have forgotten, topped up with ones you have never been tested
+  on. Write
   a sentence for each; Gemini marks the use right or wrong and comments on it,
   and you see the verdicts, the advice and how many you got right only once you
   finish.

@@ -6,16 +6,16 @@ import Fastify from "fastify";
 import { z } from "zod";
 import { config } from "./config.js";
 import {
-  countMeanings,
   deleteHistory,
   deleteTest,
   findHistory,
   findTest,
   insertHistory,
   insertTest,
+  listGradedUses,
   listHistories,
   listTests,
-  pickRandomWords,
+  listWordCandidates,
 } from "./db.js";
 import { ask, askJson } from "./genai.js";
 import {
@@ -25,6 +25,7 @@ import {
   toQuestionText,
 } from "./history.js";
 import { handleAskByType } from "./meaning.js";
+import { pickTestWords } from "./schedule.js";
 import {
   gradeAnswers,
   TEST_LIST_LIMIT,
@@ -159,16 +160,21 @@ fastify.delete("/api/v1/histories/:id", async (request, reply) => {
   return reply.code(204).send();
 });
 
-// A fresh test set: `TEST_WORD_COUNT` random words drawn from what has been
-// looked up before. Nothing is written yet — a test reaches the database only
-// once it has been answered, so abandoning one leaves no trace.
+// A fresh test set: the `TEST_WORD_COUNT` looked-up words most in need of
+// practice, as `pickTestWords` ranks them. Nothing is written yet — a test
+// reaches the database only once it has been answered, so abandoning one
+// leaves no trace.
 fastify.get("/api/v1/tests/new", async (_request, reply) => {
-  const words = await pickRandomWords({ take: TEST_WORD_COUNT });
+  const [candidates, uses] = await Promise.all([
+    listWordCandidates(),
+    listGradedUses(),
+  ]);
+  const words = pickTestWords({ candidates, uses, take: TEST_WORD_COUNT });
 
   if (words.length < TEST_WORD_COUNT) {
     return reply.code(409).send({
       error: "Not enough words yet",
-      available: await countMeanings(),
+      available: candidates.length,
       required: TEST_WORD_COUNT,
     });
   }
