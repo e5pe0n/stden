@@ -1,6 +1,7 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { type Prisma, PrismaClient } from "../generated/prisma/index.js";
 import { config } from "./config.js";
+import type { Candidate, GradedUse } from "./schedule.js";
 
 const adapter = new PrismaPg({
   connectionString: config.databaseUrl,
@@ -61,24 +62,38 @@ export function deleteHistory(where: Prisma.historiesWhereInput) {
   });
 }
 
-/**
- * A random sample of words already looked up. `ORDER BY random()` sorts the
- * whole table, which is the right trade for a personal dictionary: it is
- * exact, needs no id bookkeeping, and the row count stays in the thousands.
- */
-export async function pickRandomWords({
-  take,
-}: {
-  take: number;
-}): Promise<string[]> {
-  const rows = await prisma.$queryRaw<
-    { word: string }[]
-  >`SELECT word FROM meanings ORDER BY random() LIMIT ${take}`;
-  return rows.map((row) => row.word);
+/** Every word a test can ask, with what untested ones are ordered by. */
+export async function listWordCandidates(): Promise<Candidate[]> {
+  const rows = await prisma.meanings.findMany({
+    select: { word: true, asked_count: true, created_at: true },
+  });
+  return rows.map((row) => ({
+    word: row.word,
+    askedCount: row.asked_count,
+    createdAt: row.created_at,
+  }));
 }
 
-export function countMeanings() {
-  return prisma.meanings.count();
+/**
+ * Every graded answer, for word selection to replay. The whole history is read
+ * per test, which is the right trade for a personal dictionary: ten rows a test
+ * stays small, and nothing derived is stored to fall out of step. Ungraded
+ * answers are left out — they say nothing about the learner.
+ */
+export async function listGradedUses(): Promise<GradedUse[]> {
+  const rows = await prisma.test_questions.findMany({
+    where: { correct: { not: null } },
+    select: {
+      word: true,
+      correct: true,
+      test: { select: { created_at: true } },
+    },
+  });
+  return rows.map((row) => ({
+    word: row.word,
+    correct: row.correct === true,
+    at: row.test.created_at,
+  }));
 }
 
 export function insertTest(data: Prisma.testsCreateInput) {

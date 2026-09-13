@@ -87,7 +87,8 @@ export async function gradeAnswers({
       position: index + 1,
       word: item.word,
       answer: item.answer,
-      correct: grade?.correct ?? false,
+      // No verdict is not a wrong answer: null keeps it out of word selection.
+      correct: grade?.correct ?? null,
       comment: grade?.comment ?? "This answer could not be graded.",
     };
   });
@@ -96,7 +97,7 @@ export async function gradeAnswers({
 }
 
 export function toTestSummary(
-  row: tests & { questions: { word: string; correct: boolean }[] },
+  row: tests & { questions: { word: string; correct: boolean | null }[] },
 ): TestSummary {
   return {
     id: row.id,
