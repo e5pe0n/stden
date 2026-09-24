@@ -1,3 +1,4 @@
+import useSWR from "swr";
 import { z } from "zod";
 import { config } from "@/config";
 
@@ -43,20 +44,26 @@ export const ACTIVITY_LEVELS = 4;
 
 const DAY_MS = 86_400_000;
 
-export async function fetchActivity(
-  signal?: AbortSignal,
-): Promise<ActivityDay[]> {
+/**
+ * Activity per day. The new-chat welcome and the Activity page share this
+ * one cache entry, so whichever opens second draws at once from the first's
+ * data; it is still revalidated on every mount, since the point of opening
+ * either is to see what was just done.
+ */
+export function useActivity() {
   // Days are cut on the server, so it has to be told where midnight is.
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const params = new URLSearchParams({ tz: timeZone });
-  const response = await fetch(
+  return useSWR(
     `${config.backendApiEndpoint}/activity?${params}`,
-    { signal },
+    async (url: string) => {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+      return activityResponseSchema.parse(await response.json()).days;
+    },
   );
-  if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
-  }
-  return activityResponseSchema.parse(await response.json()).days;
 }
 
 /** The local calendar date of `date`, in the key format the server uses. */

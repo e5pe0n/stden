@@ -26,18 +26,18 @@ import type { Feature } from "@/lib/feature";
 import {
   askResponseSchema,
   deleteHistory,
-  fetchHistories,
   fetchHistory,
   type HistoryEntry,
   type HistorySummary,
+  useHistories,
 } from "@/lib/history";
 import {
   deleteTest,
   fetchTest,
-  fetchTests,
   type TestEntry,
   type TestSummary,
   toTestSummary,
+  useTests,
 } from "@/lib/test";
 import { config } from "./config";
 
@@ -204,6 +204,10 @@ const toTestItem = (test: TestSummary): SidebarItem => ({
   createdAt: test.createdAt,
 });
 
+/** One empty list for every "not loaded yet", so it can be told apart from a
+ *  list that loaded empty. */
+const NO_ROWS: never[] = [];
+
 function App() {
   const isDesktop = useIsDesktop();
   const [feature, setFeature] = useState<Feature>("learn");
@@ -211,14 +215,33 @@ function App() {
   // feature, an entry or "New" — lands back where the learner was.
   const [isActivityOpen, setIsActivityOpen] = useState(false);
 
-  const [histories, setHistories] = useState<readonly HistorySummary[]>([]);
-  const [tests, setTests] = useState<readonly TestSummary[]>([]);
+  const {
+    data: histories = NO_ROWS,
+    error: historiesError,
+    isLoading: isLoadingHistories,
+    mutate: mutateHistories,
+  } = useHistories();
+  const {
+    data: tests = NO_ROWS,
+    error: testsError,
+    isLoading: isLoadingTests,
+    mutate: mutateTests,
+  } = useTests();
+
   // Each feature tracks its own list, selection and errors, so switching back
-  // and forth returns to what was on screen instead of resetting it.
-  const [isLoading, setIsLoading] = useState<Record<Feature, boolean>>({
-    learn: true,
-    test: true,
-  });
+  // and forth returns to what was on screen instead of resetting it. A failed
+  // load only shows while there is no list at all — a background refresh that
+  // fails behind a good list has nothing to tell the learner.
+  const loadErrors: Record<Feature, string | null> = {
+    learn:
+      historiesError && histories === NO_ROWS ? "Couldn't load history." : null,
+    test: testsError && tests === NO_ROWS ? "Couldn't load past tests." : null,
+  };
+  const isLoading: Record<Feature, boolean> = {
+    learn: isLoadingHistories,
+    test: isLoadingTests,
+  };
+  // What went wrong opening or deleting an entry; loading failures are above.
   const [errors, setErrors] = useState<Record<Feature, string | null>>({
     learn: null,
     test: null,
@@ -250,47 +273,32 @@ function App() {
     setErrors((current) => ({ ...current, [target]: message }));
   }, []);
 
-  useEffect(() => {
-    const controller = new AbortController();
-
-    const load = <T,>(
-      target: Feature,
-      fetcher: (signal: AbortSignal) => Promise<T>,
-      apply: (loaded: T) => void,
-      message: string,
-    ) =>
-      fetcher(controller.signal)
-        .then((loaded) => {
-          if (controller.signal.aborted) return;
-          apply(loaded);
-          setIsLoading((current) => ({ ...current, [target]: false }));
-        })
-        .catch(() => {
-          if (controller.signal.aborted) return;
-          setErrors((current) => ({ ...current, [target]: message }));
-          setIsLoading((current) => ({ ...current, [target]: false }));
-        });
-
-    load("learn", fetchHistories, setHistories, "Couldn't load history.");
-    load("test", fetchTests, setTests, "Couldn't load past tests.");
-
-    return () => controller.abort();
-  }, []);
-
   // Picking an entry on a phone means reading it, not staying in the list.
   // On desktop the drawer flag is already false and this changes nothing.
   const leaveSidebar = useCallback(() => setIsMobileOpen(false), []);
 
-  const handleRecorded = useCallback((history: HistorySummary) => {
-    setHistories((current) => [history, ...current]);
-    setActiveIds((current) => ({ ...current, learn: history.id }));
-  }, []);
+  // The server answered with the new row, so it goes straight into the cache
+  // rather than costing a refetch of the whole list.
+  const handleRecorded = useCallback(
+    (history: HistorySummary) => {
+      mutateHistories((current = []) => [history, ...current], {
+        revalidate: false,
+      });
+      setActiveIds((current) => ({ ...current, learn: history.id }));
+    },
+    [mutateHistories],
+  );
 
-  const handleCompleted = useCallback((entry: TestEntry) => {
-    const summary = toTestSummary(entry);
-    setTests((current) => [summary, ...current]);
-    setActiveIds((current) => ({ ...current, test: summary.id }));
-  }, []);
+  const handleCompleted = useCallback(
+    (entry: TestEntry) => {
+      const summary = toTestSummary(entry);
+      mutateTests((current = []) => [summary, ...current], {
+        revalidate: false,
+      });
+      setActiveIds((current) => ({ ...current, test: summary.id }));
+    },
+    [mutateTests],
+  );
 
   const handleSelect = useCallback(
     async (id: number) => {
@@ -337,31 +345,41 @@ function App() {
     leaveSidebar();
   }, [leaveSidebar]);
 
-  // Optimistic: the row disappears at once and comes back if the write fails.
+  // Optimistic: the row disappears at once and SWR puts it back if the write
+  // fails. The list is filtered again once the delete lands, so a row added
+  // in the meantime isn't lost to the snapshot taken before it.
   const handleDelete = useCallback(
     async (id: number) => {
-      const previousHistories = histories;
-      const previousTests = tests;
+      const without = <T extends { id: number }>(rows: T[] = []) =>
+        rows.filter((row) => row.id !== id);
+      const options = {
+        optimisticData: without,
+        rollbackOnError: true,
+        revalidate: false,
+      };
 
-      if (feature === "learn") {
-        setHistories((current) => current.filter((row) => row.id !== id));
-      } else {
-        setTests((current) => current.filter((row) => row.id !== id));
-      }
       setActiveIds((current) =>
         current[feature] === id ? { ...current, [feature]: null } : current,
       );
       setError(feature, null);
 
       try {
-        await (feature === "learn" ? deleteHistory(id) : deleteTest(id));
+        if (feature === "learn") {
+          await mutateHistories(async (current) => {
+            await deleteHistory(id);
+            return without(current);
+          }, options);
+        } else {
+          await mutateTests(async (current) => {
+            await deleteTest(id);
+            return without(current);
+          }, options);
+        }
       } catch {
-        setHistories(previousHistories);
-        setTests(previousTests);
         setError(feature, "Couldn't delete that entry.");
       }
     },
-    [feature, histories, tests, setError],
+    [feature, mutateHistories, mutateTests, setError],
   );
 
   const toggleSidebar = useCallback(() => {
@@ -390,7 +408,7 @@ function App() {
           activeId={isActivityOpen ? null : activeIds[feature]}
           pendingId={pendingId}
           isLoading={isLoading[feature]}
-          error={errors[feature]}
+          error={errors[feature] ?? loadErrors[feature]}
           emptyMessage={
             feature === "learn"
               ? "Your lookups will show up here."

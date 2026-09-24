@@ -13,9 +13,9 @@ import {
   type ActivityDay,
   buildCalendar,
   type CalendarDay,
-  fetchActivity,
   summarizeActivity,
   toActivityLevel,
+  useActivity,
 } from "@/lib/activity";
 import { cn } from "@/lib/utils";
 
@@ -63,29 +63,6 @@ const describeDay = (day: CalendarDay): string => {
   return `${what} on ${dayFormat.format(parseKey(day.date))}`;
 };
 
-type Load =
-  | { kind: "loading" }
-  | { kind: "error" }
-  | { kind: "ready"; days: ActivityDay[] };
-
-/** Fetched on every mount rather than kept in App: the overview is opened
- *  after asking and testing, and should show what was just done. */
-const useActivity = (): Load => {
-  const [load, setLoad] = useState<Load>({ kind: "loading" });
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchActivity(controller.signal)
-      .then((days) => setLoad({ kind: "ready", days }))
-      .catch(() => {
-        if (!controller.signal.aborted) setLoad({ kind: "error" });
-      });
-    return () => controller.abort();
-  }, []);
-
-  return load;
-};
-
 const useCalendar = (days: readonly ActivityDay[]) => {
   // Sampled once: a view left open past midnight keeps yesterday's grid,
   // which is what a reload is for.
@@ -99,7 +76,7 @@ const useCalendar = (days: readonly ActivityDay[]) => {
 };
 
 export const ActivityView: FC = () => {
-  const load = useActivity();
+  const { data: days, error } = useActivity();
 
   return (
     <div className="h-full overflow-y-auto">
@@ -111,12 +88,11 @@ export const ActivityView: FC = () => {
           </p>
         </div>
 
-        {load.kind === "loading" ? (
-          <p className="text-muted-foreground flex items-center gap-2 text-sm">
-            <Loader2Icon className="size-4 animate-spin" />
-            Loading…
-          </p>
-        ) : load.kind === "error" ? (
+        {/* Cached days win over a failed refresh: last visit's calendar is
+            more use than an error in its place. */}
+        {days ? (
+          <Overview days={days} />
+        ) : error ? (
           <p
             role="alert"
             className="border-destructive/30 bg-destructive/10 text-destructive rounded-lg border px-3 py-2 text-sm"
@@ -124,7 +100,10 @@ export const ActivityView: FC = () => {
             Couldn't load your activity.
           </p>
         ) : (
-          <Overview days={load.days} />
+          <p className="text-muted-foreground flex items-center gap-2 text-sm">
+            <Loader2Icon className="size-4 animate-spin" />
+            Loading…
+          </p>
         )}
       </div>
     </div>
@@ -168,11 +147,11 @@ const Overview: FC<{ days: ActivityDay[] }> = ({ days }) => {
  * loading, and nothing at all if the fetch fails.
  */
 export const ActivityWelcome: FC = () => {
-  const load = useActivity();
-  if (load.kind !== "ready") return null;
+  const { data: days } = useActivity();
+  if (!days) return null;
   return (
     <div className="fade-in animate-in flex flex-col gap-6 duration-200">
-      <Overview days={load.days} />
+      <Overview days={days} />
     </div>
   );
 };
