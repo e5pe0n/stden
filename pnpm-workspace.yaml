@@ -14,8 +14,8 @@ allowBuilds:
   protobufjs: true
 
 catalog:
-  "typescript": "6.0.3"
-  "@types/node": "25.9.1"
+  "typescript": "7.0.2"
+  "@types/node": "26.6.2"
   "zod": "4.4.3"
 
 # Pin exact versions when adding dependencies (no ^ or ~ ranges).

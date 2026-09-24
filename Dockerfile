@@ -3,15 +3,15 @@
 # Resolve the pnpm version from the root package.json "packageManager" field
 # so it has a single source of truth. pnpm is then installed with npm rather
 # than corepack, which is being removed from Node distributions.
-FROM node:24-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e AS pnpm_version
+FROM node:26-slim@sha256:ec7758ee051e457b468b32bde57b0879010b325bb9862718e9615225ce4aaae1 AS pnpm_version
 WORKDIR /src
 COPY package.json .
 # Strips any "+sha512..." integrity suffix, leaving e.g. "pnpm@11.5.0".
 RUN node -p "require('./package.json').packageManager.split('+')[0]" > /pnpm-version.txt
 
-# node:24-slim, pinned by digest so rebuilds are reproducible.
-FROM node:24-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e AS base
-# Prisma's engine needs libssl, and node:24-slim ships neither it nor the
+# node:26-slim, pinned by digest so rebuilds are reproducible.
+FROM node:26-slim@sha256:ec7758ee051e457b468b32bde57b0879010b325bb9862718e9615225ce4aaae1 AS base
+# Prisma's engine needs libssl, and node:26-slim ships neither it nor the
 # system CA bundle.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl ca-certificates \
