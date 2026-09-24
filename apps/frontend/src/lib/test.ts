@@ -1,3 +1,4 @@
+import useSWR from "swr";
 import { z } from "zod";
 import { config } from "@/config";
 
@@ -112,9 +113,12 @@ export async function submitTest(
   return testDetailResponseSchema.parse(data).test;
 }
 
-export async function fetchTests(signal?: AbortSignal): Promise<TestSummary[]> {
-  const data = await requestJson(testsUrl, { signal });
-  return testListResponseSchema.parse(data).tests;
+/** Past tests, newest first — shared and updated like `useHistories`. */
+export function useTests() {
+  return useSWR(testsUrl, async (url: string) => {
+    const data = await requestJson(url);
+    return testListResponseSchema.parse(data).tests;
+  });
 }
 
 export async function fetchTest(

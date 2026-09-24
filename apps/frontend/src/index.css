@@ -28,6 +28,10 @@
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-success: var(--success);
+  --color-activity-1: var(--activity-1);
+  --color-activity-2: var(--activity-2);
+  --color-activity-3: var(--activity-3);
+  --color-activity-4: var(--activity-4);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -68,6 +72,11 @@
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --success: oklch(0.52 0.15 150);
+  /* The activity heatmap: one green, light to dark, so more reads as more. */
+  --activity-1: oklch(0.87 0.08 150);
+  --activity-2: oklch(0.74 0.13 150);
+  --activity-3: oklch(0.6 0.15 150);
+  --activity-4: oklch(0.45 0.13 150);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -104,6 +113,11 @@
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --success: oklch(0.7 0.15 150);
+  /* Reversed against the dark surface: brighter is busier. */
+  --activity-1: oklch(0.38 0.08 150);
+  --activity-2: oklch(0.5 0.12 150);
+  --activity-3: oklch(0.64 0.15 150);
+  --activity-4: oklch(0.8 0.16 150);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);

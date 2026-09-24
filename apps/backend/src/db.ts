@@ -2,6 +2,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { type Prisma, PrismaClient } from "../generated/prisma/index.js";
 import { config } from "./config.js";
 import type { Candidate, GradedUse } from "./schedule.js";
+import type { ActivityDay } from "./types.js";
 
 const adapter = new PrismaPg({
   connectionString: config.databaseUrl,
@@ -131,4 +132,34 @@ export function deleteTest(where: Prisma.testsWhereInput) {
   return prisma.tests.deleteMany({
     where,
   });
+}
+
+/**
+ * Asks and finished tests per calendar day in `timeZone`, oldest first; days
+ * with neither are left out. The columns hold UTC wall-clock time without a
+ * zone, so they are pinned to UTC before being read in the learner's zone —
+ * otherwise a late-evening lookup would land on the next day's square.
+ */
+export async function listActivityDays({
+  timeZone,
+}: {
+  timeZone: string;
+}): Promise<ActivityDay[]> {
+  const rows = await prisma.$queryRaw<
+    { date: string; asks: number; tests: number }[]
+  >`
+    SELECT date, sum(asks)::int AS asks, sum(tests)::int AS tests
+    FROM (
+      SELECT to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE ${timeZone}, 'YYYY-MM-DD') AS date,
+             1 AS asks, 0 AS tests
+      FROM histories
+      UNION ALL
+      SELECT to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE ${timeZone}, 'YYYY-MM-DD'),
+             0, 1
+      FROM tests
+    ) AS activity
+    GROUP BY date
+    ORDER BY date
+  `;
+  return rows;
 }

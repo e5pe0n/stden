@@ -1,4 +1,5 @@
 import {
+  CalendarDaysIcon,
   GraduationCapIcon,
   Loader2Icon,
   PlusIcon,
@@ -47,6 +48,9 @@ type AppSidebarProps = {
   /** Shown in place of the list when there is nothing to list yet. */
   emptyMessage: string;
   newLabel: string;
+  /** Whether the main pane is showing the activity overview. */
+  isActivityOpen: boolean;
+  onActivityOpen: () => void;
   isOpen: boolean;
   onToggle: () => void;
   onSelect: (id: number) => void;
@@ -64,6 +68,8 @@ export const AppSidebar: FC<AppSidebarProps> = ({
   error,
   emptyMessage,
   newLabel,
+  isActivityOpen,
+  onActivityOpen,
   isOpen,
   onToggle,
   onSelect,
@@ -172,6 +178,26 @@ export const AppSidebar: FC<AppSidebarProps> = ({
             </ul>
           )}
         </nav>
+
+        {/* Below the lists rather than beside Learn and Test: it spans both
+            features and has no list of its own. */}
+        <div className="border-sidebar-border border-t p-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-pressed={isActivityOpen}
+            className={cn(
+              "w-full justify-start gap-1.5",
+              isActivityOpen
+                ? "bg-foreground/10 hover:bg-foreground/10"
+                : "text-muted-foreground",
+            )}
+            onClick={onActivityOpen}
+          >
+            <CalendarDaysIcon />
+            Activity
+          </Button>
+        </div>
       </aside>
     </>
   );

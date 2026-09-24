@@ -66,3 +66,11 @@ export type TestSummary = {
 export type TestEntry = TestSummary & {
   questions: TestQuestion[];
 };
+
+/** What was done on one calendar day, in the learner's time zone. */
+export type ActivityDay = {
+  /** `YYYY-MM-DD`. */
+  date: string;
+  asks: number;
+  tests: number;
+};

@@ -7,7 +7,9 @@ import { config } from "./config.ts";
 async function enableMocking() {
   if (config.mswEnabled) {
     const { worker } = await import("../mocks/browser.ts");
-    worker.start();
+    // Awaited so the app's first requests — history, tests, the activity
+    // overview — don't race past a worker that isn't listening yet.
+    await worker.start();
     return;
   }
 

@@ -20,6 +20,7 @@ import {
   ChevronRightIcon,
   CopyIcon,
   DownloadIcon,
+  LoaderIcon,
   MoreHorizontalIcon,
   PencilIcon,
   RefreshCwIcon,
@@ -29,6 +30,7 @@ import {
   type ChangeEvent,
   type FC,
   type KeyboardEvent,
+  type ReactNode,
   type SyntheticEvent,
   useEffect,
   useId,
@@ -67,7 +69,12 @@ import {
   type WordToken,
 } from "@/lib/word-suggestions";
 
-export const Thread: FC = () => {
+type ThreadProps = {
+  /** Shown under the greeting until the first ask. */
+  welcome?: ReactNode;
+};
+
+export const Thread: FC<ThreadProps> = ({ welcome }) => {
   return (
     <ThreadPrimitive.Root
       className="aui-root aui-thread-root bg-background @container flex h-full flex-col"
@@ -84,7 +91,7 @@ export const Thread: FC = () => {
       >
         <div className="mx-auto flex w-full max-w-(--thread-max-width) flex-1 flex-col px-4 pt-4">
           <AuiIf condition={(s) => s.thread.isEmpty}>
-            <ThreadWelcome />
+            <ThreadWelcome>{welcome}</ThreadWelcome>
           </AuiIf>
 
           <div
@@ -131,17 +138,20 @@ const ThreadScrollToBottom: FC = () => {
   );
 };
 
-const ThreadWelcome: FC = () => {
+const ThreadWelcome: FC<{ children?: ReactNode }> = ({ children }) => {
   return (
-    <div className="aui-thread-welcome-root my-auto flex grow flex-col">
-      <div className="aui-thread-welcome-center flex w-full grow flex-col items-center justify-center">
-        <div className="aui-thread-welcome-message flex size-full flex-col justify-center px-4">
-          <h1 className="aui-thread-welcome-message-inner fade-in slide-in-from-bottom-1 animate-in fill-mode-both text-2xl font-semibold duration-200">
-            Hello there!
-          </h1>
-          <p className="aui-thread-welcome-message-inner fade-in slide-in-from-bottom-1 animate-in fill-mode-both text-muted-foreground text-xl delay-75 duration-200">
-            How can I help you today?
-          </p>
+    <div className="aui-thread-welcome-root flex grow flex-col">
+      <div className="aui-thread-welcome-center flex w-full grow flex-col items-center">
+        <div className="aui-thread-welcome-message flex w-full flex-col gap-6 pt-4 pb-8">
+          <div>
+            <h1 className="aui-thread-welcome-message-inner fade-in slide-in-from-bottom-1 animate-in fill-mode-both text-2xl font-semibold duration-200">
+              Hi there!
+            </h1>
+            <p className="aui-thread-welcome-message-inner fade-in slide-in-from-bottom-1 animate-in fill-mode-both text-muted-foreground text-xl delay-75 duration-200">
+              Ask me the meaning of any English word.
+            </p>
+          </div>
+          {children}
         </div>
       </div>
       <ThreadSuggestions />
@@ -650,6 +660,7 @@ const AssistantMessage: FC = () => {
             }
           }}
         </MessagePrimitive.GroupedParts>
+        <ThinkingIndicator />
         <MessageError />
       </div>
 
@@ -661,6 +672,40 @@ const AssistantMessage: FC = () => {
         <AssistantActionBar />
       </div>
     </MessagePrimitive.Root>
+  );
+};
+
+/**
+ * Shown while the server is working but nothing new is streaming yet:
+ * before the first part arrives, or after a tool result until the next step.
+ */
+const ThinkingIndicator: FC = () => {
+  const waiting = useAuiState((s) => {
+    if (s.message.status?.type !== "running") return false;
+    const last = s.message.parts[s.message.parts.length - 1];
+    if (!last) return true;
+    return last.type === "tool-call" && last.result !== undefined;
+  });
+
+  if (!waiting) return null;
+
+  return (
+    <div
+      role="status"
+      data-slot="aui_thinking-indicator"
+      className="aui-thinking-indicator text-muted-foreground fade-in animate-in flex items-center gap-2 py-1 text-sm duration-150"
+    >
+      <LoaderIcon className="size-4 shrink-0 animate-spin motion-reduce:animate-none" />
+      <span className="relative inline-block leading-none">
+        <span>Thinking…</span>
+        <span
+          aria-hidden
+          className="shimmer pointer-events-none absolute inset-0 motion-reduce:animate-none"
+        >
+          Thinking…
+        </span>
+      </span>
+    </div>
   );
 };
 
