@@ -17,3 +17,22 @@ catalog:
   "typescript": "6.0.3"
   "@types/node": "25.9.1"
   "zod": "4.4.3"
+
+# Pin exact versions when adding dependencies (no ^ or ~ ranges).
+savePrefix: ""
+
+# Supply-chain hardening. Some of these match pnpm 11 defaults; they are pinned
+# here so the policy stays explicit if defaults change.
+# Wait a day before resolving newly published versions.
+minimumReleaseAge: 1440
+# Fail if a package's trust evidence (provenance / trusted publisher) regresses
+# compared to its earlier releases.
+trustPolicy: no-downgrade
+trustPolicyExclude:
+  # Legitimate 6.x backport of the ReDoS fix, published without provenance
+  # after 7.x releases had it. Pulled in by @babel/core via shadcn.
+  - "semver@6.3.1"
+# Only direct dependencies may come from git repos or tarball URLs.
+blockExoticSubdeps: true
+# Fail the install when a dependency has build scripts not listed in allowBuilds.
+strictDepBuilds: true
