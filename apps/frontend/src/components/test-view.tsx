@@ -3,6 +3,7 @@ import {
   ArrowRightIcon,
   CheckIcon,
   Loader2Icon,
+  MinusIcon,
   RotateCcwIcon,
   SquareCheckBigIcon,
   XIcon,
@@ -152,9 +153,9 @@ const StartScreen: FC<{ isStarting: boolean; onStart: () => void }> = ({
     <div className="space-y-1">
       <h1 className="text-xl font-medium">Test yourself</h1>
       <p className="text-muted-foreground max-w-sm text-sm">
-        {TEST_WORD_COUNT} words drawn at random from the ones you have looked
-        up. Write a sentence that uses each one — you will see how you did at
-        the end.
+        {TEST_WORD_COUNT} of the words you have looked up, mostly the ones you
+        are likeliest to have forgotten. Write a sentence that uses each one —
+        you will see how you did at the end.
       </p>
     </div>
     <Button size="lg" disabled={isStarting} onClick={onStart}>
@@ -309,46 +310,68 @@ const ResultScreen: FC<{ test: TestEntry; onRestart: () => void }> = ({
   );
 };
 
-const ResultCard: FC<{ question: TestQuestion }> = ({ question }) => (
-  <li className="border-border rounded-lg border p-4">
-    <div className="flex items-center gap-2">
-      <span
-        aria-hidden
+const VERDICTS = {
+  correct: {
+    label: "Correct",
+    Icon: CheckIcon,
+    badge: "bg-success/15 text-success",
+    text: "text-success",
+  },
+  incorrect: {
+    label: "Incorrect",
+    Icon: XIcon,
+    badge: "bg-destructive/15 text-destructive",
+    text: "text-destructive",
+  },
+  // The grader skipped it: neither right nor wrong, and not counted as either.
+  ungraded: {
+    label: "Not graded",
+    Icon: MinusIcon,
+    badge: "bg-muted text-muted-foreground",
+    text: "text-muted-foreground",
+  },
+};
+
+const ResultCard: FC<{ question: TestQuestion }> = ({ question }) => {
+  const verdict =
+    question.correct === null
+      ? VERDICTS.ungraded
+      : question.correct
+        ? VERDICTS.correct
+        : VERDICTS.incorrect;
+
+  return (
+    <li className="border-border rounded-lg border p-4">
+      <div className="flex items-center gap-2">
+        <span
+          aria-hidden
+          className={cn(
+            "flex size-5 shrink-0 items-center justify-center rounded-full",
+            verdict.badge,
+          )}
+        >
+          <verdict.Icon className="size-3.5" />
+        </span>
+        <h2 className="font-medium">{question.word}</h2>
+        <span className={cn("ms-auto text-xs", verdict.text)}>
+          {verdict.label}
+        </span>
+      </div>
+
+      <p className="text-muted-foreground mt-3 text-xs uppercase">
+        Your answer
+      </p>
+      <p
         className={cn(
-          "flex size-5 shrink-0 items-center justify-center rounded-full",
-          question.correct
-            ? "bg-success/15 text-success"
-            : "bg-destructive/15 text-destructive",
+          "text-sm",
+          question.answer.trim() ? null : "text-muted-foreground italic",
         )}
       >
-        {question.correct ? (
-          <CheckIcon className="size-3.5" />
-        ) : (
-          <XIcon className="size-3.5" />
-        )}
-      </span>
-      <h2 className="font-medium">{question.word}</h2>
-      <span
-        className={cn(
-          "ms-auto text-xs",
-          question.correct ? "text-success" : "text-destructive",
-        )}
-      >
-        {question.correct ? "Correct" : "Incorrect"}
-      </span>
-    </div>
+        {question.answer.trim() || "No answer"}
+      </p>
 
-    <p className="text-muted-foreground mt-3 text-xs uppercase">Your answer</p>
-    <p
-      className={cn(
-        "text-sm",
-        question.answer.trim() ? null : "text-muted-foreground italic",
-      )}
-    >
-      {question.answer.trim() || "No answer"}
-    </p>
-
-    <p className="text-muted-foreground mt-3 text-xs uppercase">Comment</p>
-    <p className="text-sm">{question.comment}</p>
-  </li>
-);
+      <p className="text-muted-foreground mt-3 text-xs uppercase">Comment</p>
+      <p className="text-sm">{question.comment}</p>
+    </li>
+  );
+};

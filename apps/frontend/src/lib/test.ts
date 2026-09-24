@@ -16,7 +16,8 @@ const testQuestionSchema = z.object({
   position: z.number().int(),
   word: z.string(),
   answer: z.string(),
-  correct: z.boolean(),
+  /** `null` when the grader returned no verdict for this word. */
+  correct: z.boolean().nullable(),
   comment: z.string(),
 });
 
