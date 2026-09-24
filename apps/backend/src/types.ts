@@ -48,7 +48,8 @@ export type TestQuestion = {
   position: number;
   word: string;
   answer: string;
-  correct: boolean;
+  /** `null` when the grader returned no verdict for this item. */
+  correct: boolean | null;
   comment: string;
 };
 

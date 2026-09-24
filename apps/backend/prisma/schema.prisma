@@ -58,7 +58,10 @@ model test_questions {
   position Int
   word     String
   answer   String
-  correct  Boolean
+  /// Null when the grader returned no verdict for this item. That is not a
+  /// wrong answer, so word selection leaves it out instead of counting it
+  /// against the word.
+  correct  Boolean?
   comment  String
   test     tests   @relation(fields: [test_id], references: [id], onDelete: Cascade)
 

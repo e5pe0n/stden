@@ -43,7 +43,7 @@ type MockTest = {
     position: number;
     word: string;
     answer: string;
-    correct: boolean;
+    correct: boolean | null;
     comment: string;
   }[];
 };
@@ -120,23 +120,29 @@ const handlers: HttpHandler[] = [
     return new HttpResponse(null, { status: 204 });
   }),
 
-  // Grades every other answer correct, which is enough to exercise both
-  // result states without a model behind it.
+  // Grades every other answer correct and leaves the last one ungraded, which
+  // is enough to exercise every result state without a model behind it.
   http.post(`${API}/tests`, async ({ request }) => {
     const { answers } = (await request.json()) as {
       answers: { word: string; answer: string }[];
     };
 
     const questions = answers.map((item, index) => {
-      const correct = Boolean(item.answer.trim()) && index % 2 === 0;
+      const correct =
+        index === answers.length - 1
+          ? null
+          : Boolean(item.answer.trim()) && index % 2 === 0;
       return {
         position: index + 1,
         word: item.word,
         answer: item.answer,
         correct,
-        comment: correct
-          ? `Nice — "${item.word}" is used with the right meaning here.`
-          : `"${item.word}" does not quite fit. Try: The report will ${item.word} the findings.`,
+        comment:
+          correct === null
+            ? "This answer could not be graded."
+            : correct
+              ? `Nice — "${item.word}" is used with the right meaning here.`
+              : `"${item.word}" does not quite fit. Try: The report will ${item.word} the findings.`,
       };
     });
 
