@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { ActivityView } from "@/components/activity-view";
 import {
   AppSidebar,
   AppSidebarTrigger,
@@ -211,6 +212,9 @@ const toTestItem = (test: TestSummary): SidebarItem => ({
 function App() {
   const isDesktop = useIsDesktop();
   const [feature, setFeature] = useState<Feature>("learn");
+  // Shown over whichever feature is current, so closing it — by picking a
+  // feature, an entry or "New" — lands back where the learner was.
+  const [isActivityOpen, setIsActivityOpen] = useState(false);
 
   const [histories, setHistories] = useState<readonly HistorySummary[]>([]);
   const [tests, setTests] = useState<readonly TestSummary[]>([]);
@@ -306,6 +310,7 @@ function App() {
           setTest((current) => ({ key: current.key + 1, entry }));
         }
         setActiveIds((current) => ({ ...current, [feature]: id }));
+        setIsActivityOpen(false);
         leaveSidebar();
       } catch {
         setError(feature, "Couldn't open that entry.");
@@ -323,8 +328,19 @@ function App() {
       setTest((current) => ({ key: current.key + 1, entry: null }));
     }
     setActiveIds((current) => ({ ...current, [feature]: null }));
+    setIsActivityOpen(false);
     leaveSidebar();
   }, [feature, leaveSidebar]);
+
+  const handleFeatureChange = useCallback((next: Feature) => {
+    setFeature(next);
+    setIsActivityOpen(false);
+  }, []);
+
+  const handleActivityOpen = useCallback(() => {
+    setIsActivityOpen(true);
+    leaveSidebar();
+  }, [leaveSidebar]);
 
   // Optimistic: the row disappears at once and comes back if the write fails.
   const handleDelete = useCallback(
@@ -374,9 +390,9 @@ function App() {
       <div className="bg-background flex h-dvh overflow-hidden">
         <AppSidebar
           feature={feature}
-          onFeatureChange={setFeature}
+          onFeatureChange={handleFeatureChange}
           items={items}
-          activeId={activeIds[feature]}
+          activeId={isActivityOpen ? null : activeIds[feature]}
           pendingId={pendingId}
           isLoading={isLoading[feature]}
           error={errors[feature]}
@@ -386,6 +402,8 @@ function App() {
               : "Your tests will show up here."
           }
           newLabel={feature === "learn" ? "New" : "New test"}
+          isActivityOpen={isActivityOpen}
+          onActivityOpen={handleActivityOpen}
           isOpen={isSidebarOpen}
           onToggle={toggleSidebar}
           onSelect={handleSelect}
@@ -398,7 +416,9 @@ function App() {
             <AppSidebarTrigger onToggle={toggleSidebar} />
           )}
           <div className="min-h-0 flex-1">
-            {feature === "learn" ? (
+            {isActivityOpen ? (
+              <ActivityView />
+            ) : feature === "learn" ? (
               <ChatSession
                 key={chat.key}
                 entry={chat.entry}

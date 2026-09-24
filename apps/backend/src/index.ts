@@ -12,6 +12,7 @@ import {
   findTest,
   insertHistory,
   insertTest,
+  listActivityDays,
   listGradedUses,
   listHistories,
   listTests,
@@ -55,6 +56,24 @@ const historyParamsSchema = z.object({
 });
 
 const testParamsSchema = historyParamsSchema;
+
+/** Postgres would reject an unknown zone anyway, but as a 500; checking it
+ *  here turns a bad query string into the 400 it is. */
+const activityQuerySchema = z.object({
+  tz: z
+    .string()
+    .default("UTC")
+    .refine(isTimeZone, { message: "Unknown time zone" }),
+});
+
+function isTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const submitTestSchema = z.object({
   answers: z
@@ -237,6 +256,20 @@ fastify.delete("/api/v1/tests/:id", async (request, reply) => {
   }
 
   return reply.code(204).send();
+});
+
+// Asks and tests per day, for the activity overview. Days are cut in the
+// caller's time zone — only the browser knows where the learner's midnight is.
+// Every day is returned, not just the last year: a personal history is a few
+// hundred rows at most, and the all-time streak needs them.
+fastify.get("/api/v1/activity", async (request, reply) => {
+  const parsed = activityQuerySchema.safeParse(request.query);
+  if (!parsed.success) {
+    return reply.code(400).send({ error: "Invalid time zone" });
+  }
+
+  const days = await listActivityDays({ timeZone: parsed.data.tz });
+  return reply.send({ days });
 });
 
 // Serve the built SPA from the same origin as the API. Only in production —

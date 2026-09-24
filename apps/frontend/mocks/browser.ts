@@ -67,7 +67,41 @@ const tests: MockTest[] = [];
 const toTestSummary = ({ questions: _questions, ...summary }: MockTest) =>
   summary;
 
+/**
+ * A believable year: busier on weekdays, with lapses, and a streak running up
+ * to today. Seeded so the calendar looks the same on every reload.
+ */
+const mockActivityDays = () => {
+  let seed = 7;
+  const random = () => {
+    seed = (seed * 16807) % 2147483647;
+    return seed / 2147483647;
+  };
+  const days: { date: string; asks: number; tests: number }[] = [];
+  const today = new Date();
+  for (let offset = 400; offset >= 0; offset--) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - offset);
+    const weekend = date.getDay() === 0 || date.getDay() === 6;
+    if (offset > 5 && random() < (weekend ? 0.6 : 0.3)) continue;
+    const asks = Math.floor(random() * (weekend ? 3 : 9));
+    const tests = random() < 0.25 ? 1 : 0;
+    if (asks + tests === 0 && offset > 5) continue;
+    const key = [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, "0"),
+      String(date.getDate()).padStart(2, "0"),
+    ].join("-");
+    days.push({ date: key, asks: Math.max(asks, offset <= 5 ? 1 : 0), tests });
+  }
+  return days;
+};
+
 const handlers: HttpHandler[] = [
+  http.get(`${API}/activity`, () => {
+    return HttpResponse.json({ days: mockActivityDays() });
+  }),
+
   http.get(`${API}/histories`, () => {
     return HttpResponse.json({ histories: histories.map(toSummary) });
   }),

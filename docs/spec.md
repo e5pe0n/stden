@@ -5,7 +5,7 @@
 - explain english word meanings
 - history
 - test
-- statistics
+- activity
 
 ## Input Patterns
 
@@ -31,6 +31,8 @@
 
 - **Learn** and **Test** are the two features, and the two buttons at the top
   of the sidebar.
+- **Activity** is the overview of how often both are used. It spans the two
+  features, so it sits at the bottom of the sidebar rather than beside them.
 - An **ask** is one interaction inside Learn — a meaning, a `/diff` or a
   `/free` question. It is the unit the history records, not a feature name.
 
@@ -77,3 +79,20 @@
   3. if still short: the remaining due words, then well-known words (`p ≥ 0.9`),
      then words tested in the last `12` hours, each lowest `p` first.
 - The chosen words are shuffled, so reviews and new words don't come in blocks.
+
+## Activity
+
+- A calendar of the past year, one square per day and one column per week
+  (Sunday on top), shaded by how many asks and finished tests that day had —
+  in `4` steps scaled to the busiest day shown, plus empty.
+- Hovering or focusing a square shows that day's asks and tests; arrow keys
+  move between days.
+- Beside it: asks and tests over the past year, the current streak and the
+  longest streak.
+  - A **streak** is consecutive days with at least one ask or test. The
+    current one still counts if today has nothing yet but yesterday did.
+  - The longest streak is all-time, not just the calendar's year.
+- Days are cut at the learner's local midnight: the browser sends its IANA
+  time zone and the server groups by it.
+- Nothing is stored for this: it is counted from `histories` and `tests`, so
+  deleting an ask or a test removes it from the calendar too.
