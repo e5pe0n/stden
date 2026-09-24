@@ -68,11 +68,11 @@ type Load =
   | { kind: "error" }
   | { kind: "ready"; days: ActivityDay[] };
 
-export const ActivityView: FC = () => {
+/** Fetched on every mount rather than kept in App: the overview is opened
+ *  after asking and testing, and should show what was just done. */
+const useActivity = (): Load => {
   const [load, setLoad] = useState<Load>({ kind: "loading" });
 
-  // Fetched on every visit rather than kept in App: the overview is opened
-  // after asking and testing, and should show what was just done.
   useEffect(() => {
     const controller = new AbortController();
     fetchActivity(controller.signal)
@@ -82,6 +82,24 @@ export const ActivityView: FC = () => {
       });
     return () => controller.abort();
   }, []);
+
+  return load;
+};
+
+const useCalendar = (days: readonly ActivityDay[]) => {
+  // Sampled once: a view left open past midnight keeps yesterday's grid,
+  // which is what a reload is for.
+  const [today] = useState(() => new Date());
+  const calendar = useMemo(() => buildCalendar(days, today), [days, today]);
+  const summary = useMemo(
+    () => summarizeActivity(days, calendar, today),
+    [days, calendar, today],
+  );
+  return { calendar, summary };
+};
+
+export const ActivityView: FC = () => {
+  const load = useActivity();
 
   return (
     <div className="h-full overflow-y-auto">
@@ -114,14 +132,7 @@ export const ActivityView: FC = () => {
 };
 
 const Overview: FC<{ days: ActivityDay[] }> = ({ days }) => {
-  // Sampled once: a view left open past midnight keeps yesterday's grid,
-  // which is what a reload is for.
-  const [today] = useState(() => new Date());
-  const calendar = useMemo(() => buildCalendar(days, today), [days, today]);
-  const summary = useMemo(
-    () => summarizeActivity(days, calendar, today),
-    [days, calendar, today],
-  );
+  const { calendar, summary } = useCalendar(days);
 
   return (
     <>
@@ -147,6 +158,22 @@ const Overview: FC<{ days: ActivityDay[] }> = ({ days }) => {
         <Heatmap calendar={calendar} />
       </section>
     </>
+  );
+};
+
+/**
+ * The same overview, for the welcome of a new chat — what a learner sees each
+ * time they sit down, the way a new Claude Code session opens on its usage.
+ * The chat is what they came for, so this stays out of its way: nothing while
+ * loading, and nothing at all if the fetch fails.
+ */
+export const ActivityWelcome: FC = () => {
+  const load = useActivity();
+  if (load.kind !== "ready") return null;
+  return (
+    <div className="fade-in animate-in flex flex-col gap-6 duration-200">
+      <Overview days={load.days} />
+    </div>
   );
 };
 

@@ -92,6 +92,8 @@
   - A **streak** is consecutive days with at least one ask or test. The
     current one still counts if today has nothing yet but yesterday did.
   - The longest streak is all-time, not just the calendar's year.
+- A new Learn chat shows the same overview under the greeting, until the
+  first ask.
 - Days are cut at the learner's local midnight: the browser sends its IANA
   time zone and the server groups by it.
 - Nothing is stored for this: it is counted from `histories` and `tests`, so

@@ -12,7 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { ActivityView } from "@/components/activity-view";
+import { ActivityView, ActivityWelcome } from "@/components/activity-view";
 import {
   AppSidebar,
   AppSidebarTrigger,
@@ -40,13 +40,6 @@ import {
   toTestSummary,
 } from "@/lib/test";
 import { config } from "./config";
-
-const GREETING: ThreadMessageLike = {
-  role: "assistant",
-  content: [
-    { type: "text", text: "Hi! Ask me the meaning of any English word." },
-  ],
-};
 
 const FALLBACK_ANSWER = "Sorry, I couldn't find the meaning.";
 
@@ -86,9 +79,11 @@ type Session<T> = {
   entry: T | null;
 };
 
+/** A new chat starts empty, so the thread shows its welcome — the greeting
+ *  and the activity overview — until the first ask. */
 const toInitialMessages = (entry: HistoryEntry | null): ThreadMessageLike[] =>
   entry === null
-    ? [GREETING]
+    ? []
     : [
         { role: "user", content: [{ type: "text", text: entry.question }] },
         { role: "assistant", content: [{ type: "text", text: entry.answer }] },
@@ -189,7 +184,7 @@ const ChatSession: FC<ChatSessionProps> = ({ entry, onRecorded }) => {
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
-      <Thread />
+      <Thread welcome={<ActivityWelcome />} />
     </AssistantRuntimeProvider>
   );
 };
