@@ -232,9 +232,10 @@ const Heatmap: FC<{ calendar: CalendarDay[][] }> = ({ calendar }) => {
   // One tab stop for the whole grid; arrow keys move within it. It starts on
   // today, the square someone checking their streak is looking for.
   const lastWeek = calendar.length - 1;
+  // Future days only ever trail the last week, so counting the rest finds today.
   const todayWeekday = Math.max(
     0,
-    (calendar[lastWeek] ?? []).findLastIndex((day) => !day.isFuture),
+    (calendar[lastWeek] ?? []).filter((day) => !day.isFuture).length - 1,
   );
   const [focus, setFocus] = useState({
     week: lastWeek,
