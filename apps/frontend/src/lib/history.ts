@@ -1,3 +1,4 @@
+import useSWR from "swr";
 import { z } from "zod";
 import { config } from "@/config";
 import { ASK_TYPES } from "@/lib/ask";
@@ -47,11 +48,14 @@ async function requestJson(url: string, init?: RequestInit): Promise<unknown> {
   return response.json();
 }
 
-export async function fetchHistories(
-  signal?: AbortSignal,
-): Promise<HistorySummary[]> {
-  const data = await requestJson(historiesUrl, { signal });
-  return historyListResponseSchema.parse(data).histories;
+/** Recent asks, newest first. Keyed by URL, so every caller shares one list
+ *  and one request, and new or deleted rows are written back through
+ *  `mutate` instead of refetched. */
+export function useHistories() {
+  return useSWR(historiesUrl, async (url: string) => {
+    const data = await requestJson(url);
+    return historyListResponseSchema.parse(data).histories;
+  });
 }
 
 export async function fetchHistory(
