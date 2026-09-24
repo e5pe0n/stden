@@ -20,6 +20,7 @@ import {
   ChevronRightIcon,
   CopyIcon,
   DownloadIcon,
+  LoaderIcon,
   MoreHorizontalIcon,
   PencilIcon,
   RefreshCwIcon,
@@ -659,6 +660,7 @@ const AssistantMessage: FC = () => {
             }
           }}
         </MessagePrimitive.GroupedParts>
+        <ThinkingIndicator />
         <MessageError />
       </div>
 
@@ -670,6 +672,40 @@ const AssistantMessage: FC = () => {
         <AssistantActionBar />
       </div>
     </MessagePrimitive.Root>
+  );
+};
+
+/**
+ * Shown while the server is working but nothing new is streaming yet:
+ * before the first part arrives, or after a tool result until the next step.
+ */
+const ThinkingIndicator: FC = () => {
+  const waiting = useAuiState((s) => {
+    if (s.message.status?.type !== "running") return false;
+    const last = s.message.parts[s.message.parts.length - 1];
+    if (!last) return true;
+    return last.type === "tool-call" && last.result !== undefined;
+  });
+
+  if (!waiting) return null;
+
+  return (
+    <div
+      role="status"
+      data-slot="aui_thinking-indicator"
+      className="aui-thinking-indicator text-muted-foreground fade-in animate-in flex items-center gap-2 py-1 text-sm duration-150"
+    >
+      <LoaderIcon className="size-4 shrink-0 animate-spin motion-reduce:animate-none" />
+      <span className="relative inline-block leading-none">
+        <span>Thinking…</span>
+        <span
+          aria-hidden
+          className="shimmer pointer-events-none absolute inset-0 motion-reduce:animate-none"
+        >
+          Thinking…
+        </span>
+      </span>
+    </div>
   );
 };
 
