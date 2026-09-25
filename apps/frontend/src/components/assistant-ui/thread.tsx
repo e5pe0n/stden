@@ -421,7 +421,8 @@ const Composer: FC = () => {
       if (event.key === "Enter" && !event.shiftKey) {
         // A half-typed slash command is never a message worth sending, so Enter
         // completes it. A word usually is: Enter only completes one the user
-        // picked with the arrow keys, and otherwise sends as it always has.
+        // picked with the arrow keys, and otherwise falls through to the input
+        // (a newline, or a send with Ctrl/Cmd held).
         if (menu.kind === "command" || isSelectionExplicit) {
           event.preventDefault();
           acceptSuggestion(activeIndex);
@@ -489,6 +490,7 @@ const Composer: FC = () => {
           className="aui-composer-input placeholder:text-muted-foreground/80 max-h-32 min-h-10 w-full resize-none bg-transparent px-1.75 py-1 text-sm outline-none"
           rows={1}
           autoFocus
+          submitMode="ctrlEnter"
           aria-label="Message input"
           aria-autocomplete="list"
           aria-expanded={items.length > 0}
@@ -558,7 +560,7 @@ const ComposerAction: FC = () => {
         <ComposerPrimitive.Send
           render={
             <TooltipIconButton
-              tooltip="Send message"
+              tooltip="Send message (Ctrl+Enter)"
               side="bottom"
               type="button"
               variant="default"
@@ -834,6 +836,7 @@ const EditComposer: FC = () => {
         <ComposerPrimitive.Input
           className="aui-edit-composer-input text-foreground min-h-14 w-full resize-none bg-transparent p-4 text-sm outline-none"
           autoFocus
+          submitMode="ctrlEnter"
         />
         <div className="aui-edit-composer-footer mx-3 mb-3 flex items-center gap-2 self-end">
           <ComposerPrimitive.Cancel
