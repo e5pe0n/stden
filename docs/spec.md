@@ -46,6 +46,9 @@
 - The result lists every word with the user's answer, the verdict and the
   comment, headed by how many of the words were used correctly out of how many
   were asked.
+- Each word in the result can unfold its saved meaning — the explanation stored
+  when it was first asked about — to check the sentence against. Opening it
+  neither calls Gemini nor counts as another ask.
 - A test reaches the database only once it has been answered and graded, so an
   abandoned run leaves nothing behind.
 
