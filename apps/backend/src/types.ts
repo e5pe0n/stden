@@ -74,3 +74,20 @@ export type ActivityDay = {
   asks: number;
   tests: number;
 };
+
+/** One saved word with what the word list shows about it. */
+export type WordEntry = {
+  word: string;
+  /** How many times it has been looked up, the first time included. */
+  askedCount: number;
+  /** How many tests have asked it, graded or not. */
+  testedCount: number;
+  correctCount: number;
+  incorrectCount: number;
+  /** How long it stays remembered, from its graded answers — the shorter, the
+   *  harder the word is for the learner. `null` until it has been graded. */
+  halfLifeDays: number | null;
+  /** The definition paragraph of the saved explanation, as plain text. */
+  meaning: string;
+  createdAt: string;
+};

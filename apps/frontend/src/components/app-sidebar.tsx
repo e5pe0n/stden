@@ -1,4 +1,5 @@
 import {
+  BookAIcon,
   CalendarDaysIcon,
   GraduationCapIcon,
   Loader2Icon,
@@ -10,7 +11,7 @@ import {
 import type { FC, ReactNode } from "react";
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
 import { Button } from "@/components/ui/button";
-import type { Feature } from "@/lib/feature";
+import type { Feature, Page } from "@/lib/feature";
 import { formatHistoryTime } from "@/lib/history";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,11 @@ export type SidebarItem = {
   badge: string | null;
   createdAt: string;
 };
+
+const PAGE_BUTTONS: { page: Page; label: string; icon: ReactNode }[] = [
+  { page: "words", label: "Words", icon: <BookAIcon /> },
+  { page: "activity", label: "Activity", icon: <CalendarDaysIcon /> },
+];
 
 const FEATURE_BUTTONS: {
   feature: Feature;
@@ -48,9 +54,9 @@ type AppSidebarProps = {
   /** Shown in place of the list when there is nothing to list yet. */
   emptyMessage: string;
   newLabel: string;
-  /** Whether the main pane is showing the activity overview. */
-  isActivityOpen: boolean;
-  onActivityOpen: () => void;
+  /** The page the main pane is showing in place of the feature, if any. */
+  openPage: Page | null;
+  onPageOpen: (page: Page) => void;
   isOpen: boolean;
   onToggle: () => void;
   onSelect: (id: number) => void;
@@ -68,8 +74,8 @@ export const AppSidebar: FC<AppSidebarProps> = ({
   error,
   emptyMessage,
   newLabel,
-  isActivityOpen,
-  onActivityOpen,
+  openPage,
+  onPageOpen,
   isOpen,
   onToggle,
   onSelect,
@@ -179,24 +185,27 @@ export const AppSidebar: FC<AppSidebarProps> = ({
           )}
         </nav>
 
-        {/* Below the lists rather than beside Learn and Test: it spans both
-            features and has no list of its own. */}
-        <div className="border-sidebar-border border-t p-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-pressed={isActivityOpen}
-            className={cn(
-              "w-full justify-start gap-1.5",
-              isActivityOpen
-                ? "bg-foreground/10 hover:bg-foreground/10"
-                : "text-muted-foreground",
-            )}
-            onClick={onActivityOpen}
-          >
-            <CalendarDaysIcon />
-            Activity
-          </Button>
+        {/* Below the lists rather than beside Learn and Test: they span both
+            features and have no list of their own. */}
+        <div className="border-sidebar-border flex flex-col gap-0.5 border-t p-2">
+          {PAGE_BUTTONS.map(({ page, label, icon }) => (
+            <Button
+              key={page}
+              variant="ghost"
+              size="sm"
+              aria-pressed={openPage === page}
+              className={cn(
+                "w-full justify-start gap-1.5",
+                openPage === page
+                  ? "bg-foreground/10 hover:bg-foreground/10"
+                  : "text-muted-foreground",
+              )}
+              onClick={() => onPageOpen(page)}
+            >
+              {icon}
+              {label}
+            </Button>
+          ))}
         </div>
       </aside>
     </>

@@ -3,6 +3,7 @@ import { type Prisma, PrismaClient } from "../generated/prisma/index.js";
 import { config } from "./config.js";
 import type { Candidate, GradedUse } from "./schedule.js";
 import type { ActivityDay } from "./types.js";
+import type { SavedWord, TestUse } from "./words.js";
 
 const adapter = new PrismaPg({
   connectionString: config.databaseUrl,
@@ -93,6 +94,36 @@ export async function listGradedUses(): Promise<GradedUse[]> {
   return rows.map((row) => ({
     word: row.word,
     correct: row.correct === true,
+    at: row.test.created_at,
+  }));
+}
+
+/** Every saved word with its explanation, for the word list. */
+export async function listSavedWords(): Promise<SavedWord[]> {
+  const rows = await prisma.meanings.findMany({
+    select: { word: true, asked_count: true, output: true, created_at: true },
+  });
+  return rows.map((row) => ({
+    word: row.word,
+    askedCount: row.asked_count,
+    output: row.output,
+    createdAt: row.created_at,
+  }));
+}
+
+/** Every answer ever given, ungraded ones included — the word list counts how
+ *  often a word was tested, not only how often it was judged. */
+export async function listTestUses(): Promise<TestUse[]> {
+  const rows = await prisma.test_questions.findMany({
+    select: {
+      word: true,
+      correct: true,
+      test: { select: { created_at: true } },
+    },
+  });
+  return rows.map((row) => ({
+    word: row.word,
+    correct: row.correct,
     at: row.test.created_at,
   }));
 }

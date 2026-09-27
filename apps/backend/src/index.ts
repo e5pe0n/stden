@@ -16,7 +16,9 @@ import {
   listActivityDays,
   listGradedUses,
   listHistories,
+  listSavedWords,
   listTests,
+  listTestUses,
   listWordCandidates,
 } from "./db.js";
 import { ask, askJson } from "./genai.js";
@@ -35,6 +37,7 @@ import {
   toTestSummary,
 } from "./test.js";
 import { type HistorySummary, TEST_WORD_COUNT } from "./types.js";
+import { toWordEntries } from "./words.js";
 
 const askSchema = z.discriminatedUnion("type", [
   z.object({
@@ -199,6 +202,15 @@ fastify.get("/api/v1/meanings/:word", async (request, reply) => {
   }
 
   return reply.send({ meaning: { word: row.word, text: row.output } });
+});
+
+// Every saved word with its lookup and test counts, for the word list. The
+// whole dictionary goes in one response and is sorted and searched in the
+// browser: a personal dictionary is a few hundred rows, and filtering them
+// locally answers every keystroke without a round trip.
+fastify.get("/api/v1/words", async (_request, reply) => {
+  const [words, uses] = await Promise.all([listSavedWords(), listTestUses()]);
+  return reply.send({ words: toWordEntries({ words, uses }) });
 });
 
 // A fresh test set: the `TEST_WORD_COUNT` looked-up words most in need of
