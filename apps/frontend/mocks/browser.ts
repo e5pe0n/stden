@@ -127,6 +127,21 @@ const handlers: HttpHandler[] = [
     return new HttpResponse(null, { status: 204 });
   }),
 
+  // Every test word has a meaning except the last, so the result page shows
+  // both the explanation and the "no saved meaning" state.
+  http.get(`${API}/meanings/:word`, ({ params }) => {
+    const word = String(params.word);
+    if (word === TEST_WORDS[TEST_WORDS.length - 1]) {
+      return HttpResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    return HttpResponse.json({
+      meaning: {
+        word,
+        text: `**Meaning:** a mock explanation of "${word}".\n\n**Example Sentences:**\n\n1. This sentence uses **${word}**.\n2. Here is **${word}** again.\n\n**Synonyms:** example, sample`,
+      },
+    });
+  }),
+
   http.get(`${API}/tests/new`, () => {
     return HttpResponse.json({ words: TEST_WORDS });
   }),

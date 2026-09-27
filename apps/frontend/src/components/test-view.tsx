@@ -1,15 +1,26 @@
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
+  BookOpenIcon,
   CheckIcon,
+  ChevronDownIcon,
   Loader2Icon,
   MinusIcon,
   RotateCcwIcon,
   SquareCheckBigIcon,
   XIcon,
 } from "lucide-react";
-import { type FC, type KeyboardEvent, useCallback, useState } from "react";
+import {
+  type FC,
+  type KeyboardEvent,
+  useCallback,
+  useId,
+  useState,
+} from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
+import { MeaningNotFoundError, useMeaning } from "@/lib/meaning";
 import {
   fetchNewTestWords,
   NotEnoughWordsError,
@@ -372,6 +383,74 @@ const ResultCard: FC<{ question: TestQuestion }> = ({ question }) => {
 
       <p className="text-muted-foreground mt-3 text-xs uppercase">Comment</p>
       <p className="text-sm">{question.comment}</p>
+
+      <MeaningSection word={question.word} />
     </li>
+  );
+};
+
+/**
+ * The word's saved explanation, folded away until asked for: the result is
+ * about the learner's sentences, and the meaning is there to check them
+ * against, not to read ten of in a row.
+ */
+const MeaningSection: FC<{ word: string }> = ({ word }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const panelId = useId();
+
+  return (
+    <div className="mt-3">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-muted-foreground -ms-2"
+        aria-expanded={isOpen}
+        aria-controls={panelId}
+        onClick={() => setIsOpen((open) => !open)}
+      >
+        <BookOpenIcon />
+        {isOpen ? "Hide meaning" : "Show meaning"}
+        <ChevronDownIcon
+          className={cn("transition-transform", isOpen && "rotate-180")}
+        />
+      </Button>
+      {isOpen ? (
+        <div id={panelId} className="border-border mt-2 border-t pt-3">
+          <MeaningBody word={word} />
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+const MeaningBody: FC<{ word: string }> = ({ word }) => {
+  const { data, error, isLoading } = useMeaning(word);
+
+  if (isLoading) {
+    return (
+      <p
+        role="status"
+        className="text-muted-foreground flex items-center gap-2 text-sm"
+      >
+        <Loader2Icon className="size-4 animate-spin" />
+        Loading meaning…
+      </p>
+    );
+  }
+
+  if (error || data === undefined) {
+    return (
+      <p className="text-muted-foreground text-sm italic">
+        {error instanceof MeaningNotFoundError
+          ? "No saved meaning for this word."
+          : "Couldn't load the meaning."}
+      </p>
+    );
+  }
+
+  return (
+    <div className="prose prose-sm dark:prose-invert max-w-none">
+      <Markdown remarkPlugins={[remarkGfm]}>{data}</Markdown>
+    </div>
   );
 };
