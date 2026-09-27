@@ -14,11 +14,13 @@ import {
   DEFAULT_DIRECTIONS,
   DIFFICULTY_LABELS,
   type Difficulty,
+  FREQUENCY_LEVELS,
   filterWordRows,
   type Sort,
   type SortKey,
   sortWordRows,
   toDifficulty,
+  toFrequencyBand,
   toRankIndex,
   toWordRows,
   useWords,
@@ -49,8 +51,7 @@ const COLUMNS: {
   {
     key: "frequency",
     label: "Frequency",
-    title: "Rank by how common the word is in English — #1 is the most common",
-    numeric: true,
+    title: "How common the word is in English",
   },
   { key: "asked", label: "Asked", title: "Times looked up", numeric: true },
   { key: "tested", label: "Tested", title: "Times tested", numeric: true },
@@ -302,6 +303,7 @@ const WordTableRow: FC<{
   onToggle: () => void;
 }> = ({ row, dictionarySize, isRankLoading, isExpanded, onToggle }) => {
   const difficulty = toDifficulty(row.halfLifeDays);
+  const frequency = toFrequencyBand(row.frequencyRank);
   const panelId = useId();
 
   return (
@@ -348,15 +350,18 @@ const WordTableRow: FC<{
           )}
         </td>
         <td
-          className="px-3 py-2 text-end tabular-nums"
+          className="px-3 py-2"
           title={
             row.frequencyRank === null
               ? undefined
-              : `#${row.frequencyRank.toLocaleString()} of ${dictionarySize.toLocaleString()} words`
+              : `#${row.frequencyRank.toLocaleString()} of ${dictionarySize.toLocaleString()} words, most common first`
           }
         >
-          {row.frequencyRank !== null ? (
-            `#${row.frequencyRank.toLocaleString()}`
+          {frequency ? (
+            <span className="flex items-center gap-2 whitespace-nowrap">
+              <FrequencyMeter level={frequency.level} />
+              {frequency.label}
+            </span>
           ) : (
             <span className="text-muted-foreground">
               {isRankLoading ? "…" : "—"}
@@ -399,4 +404,21 @@ const NumberCell: FC<{ value: number }> = ({ value }) => (
   >
     {value.toLocaleString()}
   </td>
+);
+
+/** Rising bars, like a signal meter: the more filled, the more common. */
+const FrequencyMeter: FC<{ level: number }> = ({ level }) => (
+  <span aria-hidden className="flex h-3 items-end gap-px">
+    {Array.from({ length: FREQUENCY_LEVELS }, (_bar, index) => (
+      <span
+        // biome-ignore lint/suspicious/noArrayIndexKey: bars are positional
+        key={index}
+        className={cn(
+          "w-[3px] rounded-[1px]",
+          index < level ? "bg-foreground/70" : "bg-foreground/15",
+        )}
+        style={{ height: `${((index + 1) / FREQUENCY_LEVELS) * 100}%` }}
+      />
+    ))}
+  </span>
 );

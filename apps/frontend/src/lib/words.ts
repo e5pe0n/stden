@@ -48,6 +48,38 @@ export function toDifficulty(halfLifeDays: number | null): Difficulty | null {
   return "easy";
 }
 
+export type FrequencyBand = {
+  label: string;
+  /** Filled bars out of {@link FREQUENCY_LEVELS}, most common = all. */
+  level: number;
+};
+
+export const FREQUENCY_LEVELS = 5;
+
+/**
+ * Plain-language bands over the corpus rank, which on its own ("#13,223")
+ * says little about how often a word is actually met. Cut where the words
+ * around each boundary change character: "sugar" and "crew" near 3k, "goat"
+ * and "therapist" near 10k, "wrath" and "binge" by 25k, "pompous" and
+ * "grungy" by 45k, "gobbledygook" beyond.
+ */
+const FREQUENCY_BANDS: { maxRank: number; label: string }[] = [
+  { maxRank: 3_000, label: "Very common" },
+  { maxRank: 10_000, label: "Common" },
+  { maxRank: 25_000, label: "Uncommon" },
+  { maxRank: 45_000, label: "Rare" },
+  { maxRank: Number.POSITIVE_INFINITY, label: "Very rare" },
+];
+
+export function toFrequencyBand(rank: number | null): FrequencyBand | null {
+  if (rank === null) return null;
+  const index = FREQUENCY_BANDS.findIndex((band) => rank <= band.maxRank);
+  return {
+    label: FREQUENCY_BANDS[index]?.label ?? "Very rare",
+    level: FREQUENCY_LEVELS - index,
+  };
+}
+
 /** Every saved word. Revalidated on each mount, since the list is opened to
  *  see what the latest lookups and tests changed. */
 export function useWords() {
