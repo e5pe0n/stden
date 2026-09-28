@@ -127,6 +127,44 @@ const handlers: HttpHandler[] = [
     return new HttpResponse(null, { status: 204 });
   }),
 
+  // Every test word has a meaning except the last, so the result page shows
+  // both the explanation and the "no saved meaning" state.
+  http.get(`${API}/meanings/:word`, ({ params }) => {
+    const word = String(params.word);
+    if (word === TEST_WORDS[TEST_WORDS.length - 1]) {
+      return HttpResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    return HttpResponse.json({
+      meaning: {
+        word,
+        text: `**Meaning:** a mock explanation of "${word}".\n\n**Example Sentences:**\n\n1. This sentence uses **${word}**.\n2. Here is **${word}** again.\n\n**Synonyms:** example, sample`,
+      },
+    });
+  }),
+
+  // Half the test words have been tested, at every difficulty, so the list
+  // shows each badge alongside untested rows.
+  http.get(`${API}/words`, () => {
+    const halfLives = [1, 2, 4, 16, 64, null];
+    return HttpResponse.json({
+      words: TEST_WORDS.map((word, index) => {
+        const halfLifeDays = halfLives[index % halfLives.length] ?? null;
+        const correctCount = halfLifeDays === null ? 0 : index % 4;
+        const incorrectCount = halfLifeDays === 1 ? 1 : 0;
+        return {
+          word,
+          askedCount: 1 + (index % 3),
+          testedCount: correctCount + incorrectCount,
+          correctCount,
+          incorrectCount,
+          halfLifeDays,
+          meaning: `A mock definition of "${word}".`,
+          createdAt: new Date(Date.now() - index * 86_400_000).toISOString(),
+        };
+      }),
+    });
+  }),
+
   http.get(`${API}/tests/new`, () => {
     return HttpResponse.json({ words: TEST_WORDS });
   }),

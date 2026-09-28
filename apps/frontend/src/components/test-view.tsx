@@ -1,14 +1,23 @@
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
+  BookOpenIcon,
   CheckIcon,
+  ChevronDownIcon,
   Loader2Icon,
   MinusIcon,
   RotateCcwIcon,
   SquareCheckBigIcon,
   XIcon,
 } from "lucide-react";
-import { type FC, type KeyboardEvent, useCallback, useState } from "react";
+import {
+  type FC,
+  type KeyboardEvent,
+  useCallback,
+  useId,
+  useState,
+} from "react";
+import { MeaningBody } from "@/components/meaning-body";
 import { Button } from "@/components/ui/button";
 import {
   fetchNewTestWords,
@@ -372,6 +381,42 @@ const ResultCard: FC<{ question: TestQuestion }> = ({ question }) => {
 
       <p className="text-muted-foreground mt-3 text-xs uppercase">Comment</p>
       <p className="text-sm">{question.comment}</p>
+
+      <MeaningSection word={question.word} />
     </li>
+  );
+};
+
+/**
+ * The word's saved explanation, folded away until asked for: the result is
+ * about the learner's sentences, and the meaning is there to check them
+ * against, not to read ten of in a row.
+ */
+const MeaningSection: FC<{ word: string }> = ({ word }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const panelId = useId();
+
+  return (
+    <div className="mt-3">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-muted-foreground -ms-2"
+        aria-expanded={isOpen}
+        aria-controls={panelId}
+        onClick={() => setIsOpen((open) => !open)}
+      >
+        <BookOpenIcon />
+        {isOpen ? "Hide meaning" : "Show meaning"}
+        <ChevronDownIcon
+          className={cn("transition-transform", isOpen && "rotate-180")}
+        />
+      </Button>
+      {isOpen ? (
+        <div id={panelId} className="border-border mt-2 border-t pt-3">
+          <MeaningBody word={word} />
+        </div>
+      ) : null}
+    </div>
   );
 };

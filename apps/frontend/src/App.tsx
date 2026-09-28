@@ -21,8 +21,9 @@ import {
 import { Thread } from "@/components/assistant-ui/thread";
 import { TestView } from "@/components/test-view";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { WordsView } from "@/components/words-view";
 import { type AskType, parseAskPayload } from "@/lib/ask";
-import type { Feature } from "@/lib/feature";
+import type { Feature, Page } from "@/lib/feature";
 import {
   askResponseSchema,
   deleteHistory,
@@ -213,7 +214,7 @@ function App() {
   const [feature, setFeature] = useState<Feature>("learn");
   // Shown over whichever feature is current, so closing it — by picking a
   // feature, an entry or "New" — lands back where the learner was.
-  const [isActivityOpen, setIsActivityOpen] = useState(false);
+  const [openPage, setOpenPage] = useState<Page | null>(null);
 
   const {
     data: histories = NO_ROWS,
@@ -313,7 +314,7 @@ function App() {
           setTest((current) => ({ key: current.key + 1, entry }));
         }
         setActiveIds((current) => ({ ...current, [feature]: id }));
-        setIsActivityOpen(false);
+        setOpenPage(null);
         leaveSidebar();
       } catch {
         setError(feature, "Couldn't open that entry.");
@@ -331,19 +332,22 @@ function App() {
       setTest((current) => ({ key: current.key + 1, entry: null }));
     }
     setActiveIds((current) => ({ ...current, [feature]: null }));
-    setIsActivityOpen(false);
+    setOpenPage(null);
     leaveSidebar();
   }, [feature, leaveSidebar]);
 
   const handleFeatureChange = useCallback((next: Feature) => {
     setFeature(next);
-    setIsActivityOpen(false);
+    setOpenPage(null);
   }, []);
 
-  const handleActivityOpen = useCallback(() => {
-    setIsActivityOpen(true);
-    leaveSidebar();
-  }, [leaveSidebar]);
+  const handlePageOpen = useCallback(
+    (page: Page) => {
+      setOpenPage(page);
+      leaveSidebar();
+    },
+    [leaveSidebar],
+  );
 
   // Optimistic: the row disappears at once and SWR puts it back if the write
   // fails. The list is filtered again once the delete lands, so a row added
@@ -405,7 +409,7 @@ function App() {
           feature={feature}
           onFeatureChange={handleFeatureChange}
           items={items}
-          activeId={isActivityOpen ? null : activeIds[feature]}
+          activeId={openPage ? null : activeIds[feature]}
           pendingId={pendingId}
           isLoading={isLoading[feature]}
           error={errors[feature] ?? loadErrors[feature]}
@@ -415,8 +419,8 @@ function App() {
               : "Your tests will show up here."
           }
           newLabel={feature === "learn" ? "New" : "New test"}
-          isActivityOpen={isActivityOpen}
-          onActivityOpen={handleActivityOpen}
+          openPage={openPage}
+          onPageOpen={handlePageOpen}
           isOpen={isSidebarOpen}
           onToggle={toggleSidebar}
           onSelect={handleSelect}
@@ -429,8 +433,10 @@ function App() {
             <AppSidebarTrigger onToggle={toggleSidebar} />
           )}
           <div className="min-h-0 flex-1">
-            {isActivityOpen ? (
+            {openPage === "activity" ? (
               <ActivityView />
+            ) : openPage === "words" ? (
+              <WordsView />
             ) : feature === "learn" ? (
               <ChatSession
                 key={chat.key}

@@ -9,13 +9,16 @@ import {
   deleteHistory,
   deleteTest,
   findHistory,
+  findMeaning,
   findTest,
   insertHistory,
   insertTest,
   listActivityDays,
   listGradedUses,
   listHistories,
+  listSavedWords,
   listTests,
+  listTestUses,
   listWordCandidates,
 } from "./db.js";
 import { ask, askJson } from "./genai.js";
@@ -34,6 +37,7 @@ import {
   toTestSummary,
 } from "./test.js";
 import { type HistorySummary, TEST_WORD_COUNT } from "./types.js";
+import { toWordEntries } from "./words.js";
 
 const askSchema = z.discriminatedUnion("type", [
   z.object({
@@ -56,6 +60,10 @@ const historyParamsSchema = z.object({
 });
 
 const testParamsSchema = historyParamsSchema;
+
+const meaningParamsSchema = z.object({
+  word: z.string().min(1),
+});
 
 /** Postgres would reject an unknown zone anyway, but as a 500; checking it
  *  here turns a bad query string into the 400 it is. */
@@ -177,6 +185,32 @@ fastify.delete("/api/v1/histories/:id", async (request, reply) => {
   }
 
   return reply.code(204).send();
+});
+
+// The stored explanation of a word, for the test result to show beside the
+// learner's sentence. Read-only: unlike asking, looking it up here neither
+// calls the model nor counts as another ask, so it cannot skew word selection.
+fastify.get("/api/v1/meanings/:word", async (request, reply) => {
+  const parsed = meaningParamsSchema.safeParse(request.params);
+  if (!parsed.success) {
+    return reply.code(400).send({ error: "Invalid word" });
+  }
+
+  const row = await findMeaning({ word: parsed.data.word });
+  if (!row) {
+    return reply.code(404).send({ error: "Not found" });
+  }
+
+  return reply.send({ meaning: { word: row.word, text: row.output } });
+});
+
+// Every saved word with its lookup and test counts, for the word list. The
+// whole dictionary goes in one response and is sorted and searched in the
+// browser: a personal dictionary is a few hundred rows, and filtering them
+// locally answers every keystroke without a round trip.
+fastify.get("/api/v1/words", async (_request, reply) => {
+  const [words, uses] = await Promise.all([listSavedWords(), listTestUses()]);
+  return reply.send({ words: toWordEntries({ words, uses }) });
 });
 
 // A fresh test set: the `TEST_WORD_COUNT` looked-up words most in need of

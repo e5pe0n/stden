@@ -6,3 +6,9 @@
 export const FEATURES = ["learn", "test"] as const;
 
 export type Feature = (typeof FEATURES)[number];
+
+/**
+ * Pages that span both features and have no sidebar list of their own. One
+ * opens over whichever feature is current, so closing it lands back there.
+ */
+export type Page = "activity" | "words";

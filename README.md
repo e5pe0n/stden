@@ -18,6 +18,11 @@ Two features share that sidebar, switched from the buttons at its top:
   and you see the verdicts, the advice and how many you got right only once you
   finish.
 
+Below the lists, **Words** tables every word you have looked up — how hard it
+is for you (from your test answers), how common it is in English, how often
+you have asked and been tested on it, and its meaning — sortable by column and
+searchable. **Activity** shows a calendar of your lookups and tests.
+
 Built with:
 
 - **Backend** — Fastify + Prisma (Postgres), Google Gemini for generation
